@@ -79,6 +79,17 @@ def get_current_branch():
     )
     return result.stdout.strip()
 
+def count_agent_commits():
+    """Count how many recent commits were made by agent-bot"""
+    result = subprocess.run(
+        ["git", "log", "--format=%an", "-10"],
+        capture_output=True,
+        text=True
+    )
+    commits = result.stdout.strip().split("\n")
+    agent_count = sum(1 for author in commits if author == "agent-bot")
+    return agent_count
+
 def is_ci_mode():
     # Check if we're in CI by looking for CI environment variable or non-main branch
     in_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
@@ -90,6 +101,16 @@ def is_ci_mode():
 if is_ci_mode():
     print(f"Running in CI mode on branch: {get_current_branch()}")
     current_branch = get_current_branch()
+
+    # Check for runaway loop - count agent-bot commits
+    agent_commit_count = count_agent_commits()
+    print(f"Found {agent_commit_count} recent agent-bot commits")
+
+    if agent_commit_count >= 7:
+        print(f"ERROR: Too many agent-bot commits ({agent_commit_count}). Stopping to prevent runaway loop.")
+        print("The agent has already attempted to fix this issue 7 times.")
+        print("Manual intervention is required.")
+        exit(1)
 
     # Configure git for CI environment
     subprocess.run(["git", "config", "--global", "user.name", "agent-bot"])
