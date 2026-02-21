@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(where:*)",
-      "Bash(npm config:*)"
+      "Bash(npm config:*)",
+      "Bash(git push:*)"
     ]
   }
 }
