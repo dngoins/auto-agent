@@ -1,0 +1,10 @@
+{
+  "status": "continue",
+  "files": [
+    {
+      "path": "math_utils.py",
+      "content": "FULL FILE CONTENTS HERE"
+    }
+  ],
+  "commit_message": "Fix add function"
+}
