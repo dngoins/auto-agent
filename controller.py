@@ -1,6 +1,7 @@
 import subprocess
 import json
 import time
+import os
 from pathlib import Path
 
 from git_tools import create_gh_branch, git_commit, git_push
@@ -8,6 +9,7 @@ from ci_tools import create_pr, get_pr_status, parse_ci_results, extract_ci_logs
 
 MAX_ITERS = 10
 
+GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 def run_tests():
     result = subprocess.run(
@@ -68,12 +70,46 @@ def apply_changes(files):
         Path(file["path"]).write_text(file["content"])
 
 
-# Create a new branch for this run
-print("Creating new branch...")
-create_gh_branch()
+# Detect if we're in CI environment or local
+def get_current_branch():
+    result = subprocess.run(
+        ["git", "branch", "--show-current"],
+        capture_output=True,
+        text=True
+    )
+    return result.stdout.strip()
 
-first_commit_made = False
-pr_number = None
+def is_ci_mode():
+    # Check if we're in CI by looking for CI environment variable or non-main branch
+    in_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+    current_branch = get_current_branch()
+    on_feature_branch = current_branch not in ["main", "master"]
+    return in_ci or on_feature_branch
+
+# Only create a new branch if NOT in CI mode
+if is_ci_mode():
+    print(f"Running in CI mode on branch: {get_current_branch()}")
+    current_branch = get_current_branch()
+
+    # Configure git for CI environment
+    subprocess.run(["git", "config", "--global", "user.name", "agent-bot"])
+    subprocess.run(["git", "config", "--global", "user.email", "agent@bot.com"])
+
+    # Get the PR number for the current branch
+    result = subprocess.run(
+        ["gh", "pr", "view", "--json", "number"],
+        capture_output=True,
+        text=True
+    )
+    pr_number = json.loads(result.stdout)["number"]
+    print(f"Fixing existing PR #{pr_number}")
+    first_commit_made = True  # Already on a PR branch
+else:
+    print("Running in local mode - creating new branch...")
+    create_gh_branch()
+    first_commit_made = False
+    pr_number = None
+
 ci_logs = None
 
 for iteration in range(MAX_ITERS):
@@ -128,19 +164,25 @@ for iteration in range(MAX_ITERS):
         apply_changes(parsed["files"])
         git_commit(parsed["commit_message"])
 
-    # 3. Push branch (force push after first commit to update same PR)
-    if first_commit_made:
-        print("Force pushing to update PR...")
+    # 3. Push branch
+    if is_ci_mode():
+        # In CI mode: always force push to update existing PR
+        print("Force pushing to update existing PR...")
         git_push(force=True)
     else:
-        print("Pushing to remote...")
-        git_push()
-        first_commit_made = True
+        # Local mode: normal push first time, force push after
+        if first_commit_made:
+            print("Force pushing to update PR...")
+            git_push(force=True)
+        else:
+            print("Pushing to remote...")
+            git_push()
+            first_commit_made = True
 
-    # Create PR after first push
-    if pr_number is None:
-        print("Creating pull request...")
-        pr_number = create_pr()
+        # Create PR after first push (local mode only)
+        if pr_number is None:
+            print("Creating pull request...")
+            pr_number = create_pr()
 
     # 4. Wait 30 seconds for CI
     print("Waiting 30 seconds for CI to run...")
