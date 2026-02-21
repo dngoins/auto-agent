@@ -1,5 +1,12 @@
 name: Autonomous Repair Agent
 
+# How it works:
+# 1. Triggered when Python Tests workflow fails
+# 2. Fetches actual CI logs from the failed test run (no local test execution needed)
+# 3. Sends logs to Claude for analysis and code fixes
+# 4. Commits and force pushes to update the same PR
+# 5. Repeats until tests pass or safety limits reached
+#
 # Safety mechanisms:
 # 1. Checks for runaway loops (max 7 consecutive agent-bot commits)
 # 2. Controller has MAX_ITERS limit (default: 10)

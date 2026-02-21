@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from git_tools import create_gh_branch, git_commit, git_push
-from ci_tools import create_pr, get_pr_status, parse_ci_results, extract_ci_logs, get_latest_run_logs
+from ci_tools import create_pr, get_pr_status, parse_ci_results, extract_ci_logs, get_latest_run_logs, get_failed_test_logs
 
 MAX_ITERS = 10
 
@@ -133,11 +133,26 @@ else:
 
 ci_logs = None
 
+# In CI mode, fetch the initial failed test logs instead of running locally
+if is_ci_mode():
+    print("Fetching failed test logs from CI...")
+    initial_ci_logs = get_failed_test_logs()
+    if initial_ci_logs:
+        ci_logs = "Initial CI Test Failure:\n\n" + initial_ci_logs
+        print("Successfully fetched CI test logs")
+    else:
+        print("Warning: Could not fetch CI logs, will run tests locally")
+
 for iteration in range(MAX_ITERS):
     print(f"\n=== Iteration {iteration + 1} ===")
 
-    # 1. Run local tests
-    code, output = run_tests()
+    # 1. Run local tests (skip if we already have CI logs from initial fetch)
+    if ci_logs and iteration == 0 and is_ci_mode():
+        print("Using fetched CI logs, skipping local test run")
+        code = 1  # Mark as failed to trigger Claude
+        output = ""
+    else:
+        code, output = run_tests()
 
     # 2. If fail → ask Claude → apply changes → commit
     if code != 0 or ci_logs:
@@ -148,10 +163,12 @@ for iteration in range(MAX_ITERS):
 
         # Build prompt with local test output and/or CI logs
         if ci_logs:
-            test_section = "If CI failed, here are the logs:\n\n" + ci_logs + "\n\nRevise the code to fix these issues."
+            # Use CI logs (either from initial fetch or from subsequent CI runs)
+            test_section = "CI Test Failure Logs:\n\n" + ci_logs + "\n\nRevise the code to fix these issues."
             prompt = template.replace("{{TEST_OUTPUT}}", "")
             prompt = prompt.replace("{{CI_LOGS}}", test_section)
         else:
+            # Use local test output
             test_section = "The following tests failed:\n\n" + output
             prompt = template.replace("{{TEST_OUTPUT}}", test_section)
             prompt = prompt.replace("{{CI_LOGS}}", "")

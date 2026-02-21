@@ -49,6 +49,7 @@ def extract_ci_logs(checks):
 
 
 def get_latest_run_logs():
+    """Get logs from the most recent workflow run"""
     runs = subprocess.run(
         ["gh", "run", "list", "--limit", "1", "--json", "databaseId"],
         capture_output=True,
@@ -63,3 +64,39 @@ def get_latest_run_logs():
     )
 
     return logs.stdout
+
+
+def get_run_logs_by_id(run_id):
+    """Get logs from a specific workflow run ID"""
+    logs = subprocess.run(
+        ["gh", "run", "view", str(run_id), "--log"],
+        capture_output=True,
+        text=True
+    )
+    return logs.stdout
+
+
+def get_failed_test_logs():
+    """Get logs from the test workflow run that triggered this repair agent"""
+    # In GitHub Actions, get the workflow run that triggered us
+    import os
+
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        # Get the triggering workflow run from the event
+        runs = subprocess.run(
+            ["gh", "run", "list", "--workflow", "Python Tests", "--limit", "5",
+             "--json", "databaseId,conclusion,status"],
+            capture_output=True,
+            text=True
+        )
+
+        runs_data = json.loads(runs.stdout)
+
+        # Find the most recent failed run
+        for run in runs_data:
+            if run.get("conclusion") == "failure":
+                run_id = run["databaseId"]
+                print(f"Fetching logs from failed test run #{run_id}")
+                return get_run_logs_by_id(run_id)
+
+    return None
