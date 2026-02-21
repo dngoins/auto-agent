@@ -28,13 +28,36 @@ def collect_files():
 
 
 def call_claude(prompt):
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "enum": ["continue", "complete"]},
+            "files": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "content": {"type": "string"}
+                    },
+                    "required": ["path", "content"]
+                }
+            },
+            "commit_message": {"type": "string"}
+        },
+        "required": ["status", "files", "commit_message"]
+    })
+
     result = subprocess.run(
-        ["claude", "--print"],
+        ["claude", "--print", "--output-format", "json", "--json-schema", schema],
         input=prompt,
         text=True,
         capture_output=True,
         shell=True
     )
+    if result.returncode != 0:
+        print(f"Error calling Claude: {result.stderr}")
+        return None
     return result.stdout
 
 
@@ -65,17 +88,38 @@ for iteration in range(MAX_ITERS):
 
     response = call_claude(prompt)
 
+    if response is None:
+        print("Failed to get response from Claude")
+        break
+
     try:
-        parsed = json.loads(response)
-    except:
-        print("Invalid JSON from Claude")
+        # Parse the CLI output wrapper
+        cli_response = json.loads(response)
+
+        # When using --json-schema, the output is in structured_output
+        if "structured_output" in cli_response:
+            parsed = cli_response["structured_output"]
+        else:
+            print("Unexpected response format from Claude")
+            print(response)
+            break
+    except Exception as e:
+        print(f"Invalid JSON from Claude: {e}")
+        print(f"Response: {response}")
         break
 
-    if parsed.get("status") == "complete":
-        print("Agent marked complete.")
-        break
-
+    # Apply the changes
+    print(f"Applying changes to {len(parsed['files'])} file(s)...")
     apply_changes(parsed["files"])
-    git_commit(parsed["commit_message"])
+
+    # Verify tests pass after applying changes
+    code, output = run_tests()
+    if code == 0:
+        print("Tests passed after applying changes!")
+        git_commit(parsed["commit_message"])
+        break
+    else:
+        print("Tests still failing after changes, continuing...")
+        git_commit(parsed["commit_message"])
 
 print("Done.")

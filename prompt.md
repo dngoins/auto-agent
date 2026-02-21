@@ -6,6 +6,7 @@ Rules:
 - Output ONLY valid JSON, nothing else.
 - Output full file contents in the "content" field.
 - Do NOT use markdown code blocks, output raw JSON only.
+- If you output anything else, the system will fail.
 
 Required JSON format:
 {
@@ -16,7 +17,7 @@ Required JSON format:
       "content": "def add(a, b):\n    return a + b\n"
     }
   ],
-  "commit_message": "Fix add function to return sum instead of difference"
+  "commit_message": "Fix code to pass the tests"
 }
 
 The following tests failed:
