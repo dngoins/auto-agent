@@ -20,9 +20,9 @@ Required JSON format:
   "commit_message": "Fix code to pass the tests"
 }
 
-The following tests failed:
-
 {{TEST_OUTPUT}}
+
+{{CI_LOGS}}
 
 Repository files:
 {{FILE_CONTENTS}}
