@@ -44,7 +44,11 @@ jobs:
         id: check_loop
         run: |
           # Count consecutive agent-bot commits
-          AGENT_COMMITS=$(git log --format='%an' -10 | grep -c "agent-bot" || echo 0)
+          AGENT_COMMITS=$(git log --format='%an' -10 | grep "agent-bot" | wc -l || echo "0")
+          # Trim whitespace and ensure it's a valid number
+          AGENT_COMMITS=$(echo "$AGENT_COMMITS" | tr -d '[:space:]')
+          AGENT_COMMITS=${AGENT_COMMITS:-0}
+          echo "Found $AGENT_COMMITS agent-bot commits in recent history"
           echo "agent_commits=$AGENT_COMMITS" >> $GITHUB_OUTPUT
 
           if [ "$AGENT_COMMITS" -ge 7 ]; then
