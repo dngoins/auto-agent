@@ -234,6 +234,25 @@ for iteration in range(MAX_ITERS):
     # 6. If failed → extract logs → feed back to Claude
     if all_passed and checks:
         print("All CI checks passed!")
+
+        # Enable auto-merge on the PR
+        if is_ci_mode() and pr_number:
+            print(f"Enabling auto-merge for PR #{pr_number}...")
+            merge_result = subprocess.run(
+                ["gh", "pr", "merge", str(pr_number),
+                 "--auto",
+                 "--delete-branch"],
+                capture_output=True,
+                text=True
+            )
+
+            if merge_result.returncode == 0:
+                print(f"✓ Auto-merge enabled for PR #{pr_number}")
+                print("PR will merge automatically when all checks pass and approvals are met")
+            else:
+                print(f"Warning: Could not enable auto-merge: {merge_result.stderr}")
+                print("PR may require manual review or approval")
+
         break
     else:
         print("CI checks failed, extracting logs...")
