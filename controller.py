@@ -234,6 +234,25 @@ for iteration in range(MAX_ITERS):
     # 6. If failed → extract logs → feed back to Claude
     if all_passed and checks:
         print("All CI checks passed!")
+
+        # Auto-merge the PR with squash strategy
+        if is_ci_mode() and pr_number:
+            print(f"Auto-merging PR #{pr_number} with squash...")
+            merge_result = subprocess.run(
+                ["gh", "pr", "merge", str(pr_number),
+                 "--squash",
+                 "--delete-branch",
+                 "--body", "Automatically merged after autonomous agent fixed all tests"],
+                capture_output=True,
+                text=True
+            )
+
+            if merge_result.returncode == 0:
+                print(f"✓ PR #{pr_number} successfully merged and branch deleted!")
+            else:
+                print(f"Warning: Could not auto-merge PR: {merge_result.stderr}")
+                print("PR may require manual review or approval")
+
         break
     else:
         print("CI checks failed, extracting logs...")
