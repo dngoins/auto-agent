@@ -8,7 +8,9 @@ Architecture:
 This controller manages new feature development from requirements to implementation.
 """
 
+import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -23,6 +25,47 @@ from contracts import (
     CoderOutput,
     ReviewerOutput
 )
+
+
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Feature Development Pipeline')
+    parser.add_argument('--ci-mode', action='store_true',
+                       help='Run in non-interactive CI mode')
+    parser.add_argument('--auto-approve', action='store_true',
+                       help='Auto-approve all stages (skip user approval)')
+    parser.add_argument('--requirements-file', type=str,
+                       help='Path to requirements file')
+    return parser.parse_args()
+
+
+def get_requirements_input(args):
+    """Get requirements from various sources"""
+
+    # Priority 1: Environment variable (from CI)
+    if 'REQUIREMENTS_TEXT' in os.environ:
+        return os.environ['REQUIREMENTS_TEXT']
+
+    # Priority 2: File path argument
+    if args.requirements_file:
+        return Path(args.requirements_file).read_text()
+
+    # Priority 3: Interactive stdin (local mode)
+    if not args.ci_mode:
+        print("\nEnter your feature requirements (Gherkin or free form).")
+        print("Press Ctrl+D (Unix) or Ctrl+Z (Windows) when done:\n")
+
+        requirements_lines = []
+        try:
+            while True:
+                line = input()
+                requirements_lines.append(line)
+        except EOFError:
+            pass
+
+        return "\n".join(requirements_lines)
+
+    raise ValueError("No requirements provided in CI mode")
 
 
 def collect_files() -> dict:
@@ -158,8 +201,12 @@ def display_implementation_plan(plan_output: TechnicalPlannerOutput) -> None:
     print(f"Test Strategy: {plan_output['test_strategy']}")
 
 
-def get_user_approval(prompt: str) -> bool:
+def get_user_approval(prompt: str, auto_approve: bool = False) -> bool:
     """Get user approval to proceed"""
+    if auto_approve:
+        print(f"[AUTO-APPROVE] {prompt}")
+        return True
+
     while True:
         response = input(f"\n{prompt} (yes/no): ").lower().strip()
         if response in ['yes', 'y']:
@@ -173,27 +220,25 @@ def get_user_approval(prompt: str) -> bool:
 def main():
     """Main feature development pipeline"""
 
+    # Parse arguments
+    args = parse_args()
+
     print("="*60)
     print("FEATURE DEVELOPMENT PIPELINE")
+    if args.ci_mode:
+        print("(CI MODE - Automated)")
     print("="*60)
 
     # Initialize agents
     devops = DevOpsAgent()
     agent_caller = AgentCaller()
 
-    # Get requirements from user
-    print("\nEnter your feature requirements (Gherkin or free form).")
-    print("Press Ctrl+D (Unix) or Ctrl+Z (Windows) when done:\n")
-
-    requirements_lines = []
+    # Get requirements
     try:
-        while True:
-            line = input()
-            requirements_lines.append(line)
-    except EOFError:
-        pass
-
-    raw_requirements = "\n".join(requirements_lines)
+        raw_requirements = get_requirements_input(args)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
 
     if not raw_requirements.strip():
         print("Error: No requirements provided")
@@ -213,15 +258,26 @@ def main():
 
     # Handle clarification questions
     while requirements_output['needs_clarification']:
-        user_answers = display_clarification_questions(
-            requirements_output['clarification_questions']
-        )
+        questions = requirements_output['clarification_questions']
+
+        if args.ci_mode or args.auto_approve:
+            # Auto-answer with first suggested answer
+            print(f"\n[CI MODE] Auto-answering {len(questions)} clarification questions")
+            user_answers = []
+            for q in questions:
+                auto_answer = q['suggested_answers'][0] if q['suggested_answers'] else "Yes"
+                print(f"Q: {q['question']}")
+                print(f"A: {auto_answer}")
+                user_answers.append(auto_answer)
+        else:
+            # Interactive mode
+            user_answers = display_clarification_questions(questions)
 
         print("\n[REQUIREMENTS GATHER] Refining requirements with your answers...")
 
         requirements_output = agent_caller.call_requirements_gather(
             raw_requirements=raw_requirements,
-            previous_questions=[q['question'] for q in requirements_output['clarification_questions']],
+            previous_questions=[q['question'] for q in questions],
             user_answers=user_answers
         )
 
@@ -232,7 +288,7 @@ def main():
     gherkin_file.write_text("\n\n".join(requirements_output['gherkin_scenarios']))
     print(f"\n✓ Saved Gherkin scenarios to {gherkin_file}")
 
-    if not get_user_approval("Proceed to acceptance criteria?"):
+    if not get_user_approval("Proceed to acceptance criteria?", args.auto_approve):
         print("Stopped by user")
         return
 
@@ -249,7 +305,7 @@ def main():
 
     display_acceptance_criteria(ac_output)
 
-    if not get_user_approval("Proceed to technical design?"):
+    if not get_user_approval("Proceed to technical design?", args.auto_approve):
         print("Stopped by user")
         return
 
@@ -271,7 +327,7 @@ def main():
 
     display_technical_design(arch_output)
 
-    if not get_user_approval("Proceed to implementation planning?"):
+    if not get_user_approval("Proceed to implementation planning?", args.auto_approve):
         print("Stopped by user")
         return
 
@@ -291,7 +347,7 @@ def main():
 
     display_implementation_plan(tech_plan)
 
-    if not get_user_approval("Proceed to implementation?"):
+    if not get_user_approval("Proceed to implementation?", args.auto_approve):
         print("Stopped by user")
         return
 
@@ -364,7 +420,7 @@ def main():
     for file in changes['files']:
         print(f"  - {file['path']}")
 
-    if not get_user_approval("Apply changes and create commit?"):
+    if not get_user_approval("Apply changes and create commit?", args.auto_approve):
         print("Stopped by user")
         return
 

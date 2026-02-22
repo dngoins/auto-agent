@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""
+Extract requirements from GitHub event context.
+
+Supports:
+- Issues with 'auto-implement' label
+- PRs with 'auto-implement' label or '[AUTO-IMPLEMENT]' title
+- Pushed .gherkin files
+- Manual workflow_dispatch input
+"""
+
+import os
+import sys
+import json
+from pathlib import Path
+
+
+def extract_from_issue(event_data):
+    """Extract requirements from GitHub issue"""
+    issue = event_data['issue']
+    return {
+        'source': 'issue',
+        'issue_number': issue['number'],
+        'text': issue['body'] or '',
+        'title': issue['title']
+    }
+
+
+def extract_from_pr(event_data):
+    """Extract requirements from PR description"""
+    pr = event_data['pull_request']
+    return {
+        'source': 'pr',
+        'pr_number': pr['number'],
+        'text': pr['body'] or '',
+        'title': pr['title']
+    }
+
+
+def extract_from_file_push(event_data):
+    """Extract requirements from pushed .gherkin file"""
+    # Get list of changed files
+    commits = event_data.get('commits', [])
+    gherkin_files = []
+
+    for commit in commits:
+        added = commit.get('added', [])
+        modified = commit.get('modified', [])
+        all_files = added + modified
+
+        gherkin_files.extend([
+            f for f in all_files
+            if f.endswith('.gherkin')
+        ])
+
+    if not gherkin_files:
+        return None
+
+    # Read the first .gherkin file found
+    file_path = Path(gherkin_files[0])
+    if file_path.exists():
+        return {
+            'source': 'file',
+            'file_path': str(file_path),
+            'text': file_path.read_text(),
+            'title': f"Feature from {file_path.name}"
+        }
+
+    return None
+
+
+def extract_from_workflow_dispatch(event_data):
+    """Extract requirements from manual workflow input"""
+    inputs = event_data.get('inputs', {})
+    return {
+        'source': 'manual',
+        'text': inputs.get('requirements', ''),
+        'skip_questions': inputs.get('auto_approve', 'false') == 'true',
+        'title': 'Manual Feature Request'
+    }
+
+
+def main():
+    event_name = os.environ.get('GITHUB_EVENT_NAME')
+    event_path = os.environ.get('GITHUB_EVENT_PATH')
+
+    if not event_path or not Path(event_path).exists():
+        print("Error: GitHub event data not found", file=sys.stderr)
+        sys.exit(1)
+
+    with open(event_path) as f:
+        event_data = json.load(f)
+
+    # Extract based on event type
+    requirements = None
+
+    if event_name == 'issues':
+        requirements = extract_from_issue(event_data)
+    elif event_name == 'pull_request':
+        requirements = extract_from_pr(event_data)
+    elif event_name == 'push':
+        requirements = extract_from_file_push(event_data)
+    elif event_name == 'workflow_dispatch':
+        requirements = extract_from_workflow_dispatch(event_data)
+
+    if not requirements:
+        print("Error: Could not extract requirements", file=sys.stderr)
+        sys.exit(1)
+
+    # Output for GitHub Actions
+    # Set output variables using new syntax
+    output_file = os.environ.get('GITHUB_OUTPUT')
+    if output_file:
+        with open(output_file, 'a') as f:
+            f.write(f"source={requirements['source']}\n")
+            f.write(f"text<<EOF\n{requirements['text']}\nEOF\n")
+            f.write(f"title={requirements.get('title', 'Feature Request')}\n")
+
+    # Also print for debugging
+    print(f"Requirements extracted from: {requirements['source']}")
+    print(f"Title: {requirements.get('title')}")
+    print(f"Text length: {len(requirements['text'])} characters")
+
+
+if __name__ == '__main__':
+    main()

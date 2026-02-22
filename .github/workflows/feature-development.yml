@@ -1,0 +1,106 @@
+name: Feature Development Agent
+
+on:
+  # Trigger 1: Requirements file pushed
+  push:
+    paths:
+      - 'features/*.gherkin'
+      - 'requirements/*.gherkin'
+    branches-ignore:
+      - main
+      - master
+
+  # Trigger 2: Issue labeled or opened
+  issues:
+    types: [labeled, opened]
+
+  # Trigger 3: PR labeled, opened, or edited
+  pull_request:
+    types: [labeled, opened, edited]
+
+  # Trigger 4: Manual trigger with input
+  workflow_dispatch:
+    inputs:
+      requirements:
+        description: 'Feature requirements (Gherkin or free form)'
+        required: true
+        type: string
+      auto_approve:
+        description: 'Auto-approve all stages (skip questions)'
+        type: boolean
+        default: true
+
+jobs:
+  develop:
+    name: Develop Feature
+    runs-on: ubuntu-latest
+
+    # Only run if triggered appropriately
+    if: |
+      (github.event_name == 'push') ||
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'auto-implement')) ||
+      (github.event_name == 'pull_request' && (contains(github.event.pull_request.labels.*.name, 'auto-implement') || contains(github.event.pull_request.title, '[AUTO-IMPLEMENT]'))) ||
+      (github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # For PR events, checkout the PR branch
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install pytest
+
+      - name: Install Claude CLI
+        run: |
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "feature-agent-bot"
+          git config --global user.email "feature-agent@bot.com"
+
+      - name: Extract requirements from event
+        id: requirements
+        run: python scripts/extract_requirements.py
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+      - name: Run feature development pipeline
+        run: python feature_controller.py --ci-mode --auto-approve
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIREMENTS_SOURCE: ${{ steps.requirements.outputs.source }}
+          REQUIREMENTS_TEXT: ${{ steps.requirements.outputs.text }}
+          REQUIREMENTS_TITLE: ${{ steps.requirements.outputs.title }}
+          CI: 'true'
+          GITHUB_ACTIONS: 'true'
+
+      - name: Post results to issue (if triggered by issue)
+        if: github.event_name == 'issues'
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "✅ Feature development pipeline completed. Check the created PR for implementation."
+
+      - name: Post results to PR (if triggered by PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "✅ Feature development pipeline completed. Implementation has been added."
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write

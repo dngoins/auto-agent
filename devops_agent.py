@@ -265,3 +265,67 @@ class DevOpsAgent:
             print(f"The agent has already attempted to fix this issue {max_commits} times.")
             print("Manual intervention is required.")
             exit(1)
+
+    # GitHub Context Extraction
+    # =========================
+
+    def get_issue_body(self, issue_number: int) -> str:
+        """Get issue description from GitHub"""
+        result = subprocess.run(
+            ["gh", "issue", "view", str(issue_number), "--json", "body"],
+            capture_output=True,
+            text=True
+        )
+        data = json.loads(result.stdout)
+        return data['body']
+
+    def get_issue_labels(self, issue_number: int) -> list:
+        """Get labels from a GitHub issue"""
+        result = subprocess.run(
+            ["gh", "issue", "view", str(issue_number), "--json", "labels"],
+            capture_output=True,
+            text=True
+        )
+        data = json.loads(result.stdout)
+        return [label['name'] for label in data['labels']]
+
+    def get_pr_description(self, pr_number: int) -> str:
+        """Get PR description from GitHub"""
+        result = subprocess.run(
+            ["gh", "pr", "view", str(pr_number), "--json", "body"],
+            capture_output=True,
+            text=True
+        )
+        data = json.loads(result.stdout)
+        return data['body']
+
+    def get_pr_labels(self, pr_number: int) -> list:
+        """Get labels from a pull request"""
+        result = subprocess.run(
+            ["gh", "pr", "view", str(pr_number), "--json", "labels"],
+            capture_output=True,
+            text=True
+        )
+        data = json.loads(result.stdout)
+        return [label['name'] for label in data['labels']]
+
+    def comment_on_issue(self, issue_number: int, comment: str) -> None:
+        """Post a comment on a GitHub issue"""
+        subprocess.run(
+            ["gh", "issue", "comment", str(issue_number), "--body", comment]
+        )
+        print(f"Posted comment to issue #{issue_number}")
+
+    def comment_on_pr(self, pr_number: int, comment: str) -> None:
+        """Post a comment on a pull request"""
+        subprocess.run(
+            ["gh", "pr", "comment", str(pr_number), "--body", comment]
+        )
+        print(f"Posted comment to PR #{pr_number}")
+
+    def update_pr_body(self, pr_number: int, body: str) -> None:
+        """Update PR description"""
+        subprocess.run(
+            ["gh", "pr", "edit", str(pr_number), "--body", body]
+        )
+        print(f"Updated PR #{pr_number} description")
