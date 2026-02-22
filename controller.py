@@ -1,17 +1,30 @@
+"""
+Multi-Agent Controller - Orchestrates the agent pipeline.
+
+Architecture:
+    Controller → Planner → Coder → Tester → Reviewer → DevOps
+
+Each agent has a strict, limited role with clean information boundaries.
+The controller manages the iteration loop and feedback between agents.
+"""
+
 import subprocess
 import json
-import time
 import os
 from pathlib import Path
+from typing import Optional
 
-from git_tools import create_gh_branch, git_commit, git_push
-from ci_tools import create_pr, get_pr_status, parse_ci_results, extract_ci_logs, get_latest_run_logs, get_failed_test_logs
+from devops_agent import DevOpsAgent
+from agent_caller import AgentCaller
+from contracts import PlannerOutput, CoderOutput, ReviewerOutput
 
+# Configuration
 MAX_ITERS = 10
+MAX_REVIEWER_RETRIES = 3
 
-GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
-def run_tests():
+def run_tests() -> tuple[int, str]:
+    """Run pytest and return (exit_code, output)"""
     result = subprocess.run(
         ["pytest"],
         capture_output=True,
@@ -20,248 +33,274 @@ def run_tests():
     return result.returncode, result.stdout
 
 
-def collect_files():
-    files_data = ""
+def collect_files() -> dict:
+    """
+    Collect all Python files in the repository.
+    Returns dict of {path: content}
+    """
+    files_data = {}
     for file in Path(".").glob("*.py"):
-        if "controller.py" in str(file):
+        # Skip controller to avoid self-modification
+        if "controller" in str(file):
             continue
-        files_data += f"\n--- {file} ---\n"
-        print(files_data)
-        files_data += file.read_text()
+        files_data[str(file)] = file.read_text()
     return files_data
 
 
-def call_claude(prompt):
-    schema = json.dumps({
-        "type": "object",
-        "properties": {
-            "status": {"type": "string", "enum": ["continue", "complete"]},
-            "files": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string"},
-                        "content": {"type": "string"}
-                    },
-                    "required": ["path", "content"]
-                }
-            },
-            "commit_message": {"type": "string"}
-        },
-        "required": ["status", "files", "commit_message"]
-    })
-
-    result = subprocess.run(
-        ["claude", "--print", "--output-format", "json", "--json-schema", schema],
-        input=prompt,
-        text=True,
-        capture_output=True,
-        shell=True
-    )
-    if result.returncode != 0:
-        print(f"Error calling Claude: {result.stderr}")
-        return None
-    return result.stdout
-
-
-def apply_changes(files):
+def apply_changes(files: list) -> None:
+    """Apply file changes to disk"""
     for file in files:
         Path(file["path"]).write_text(file["content"])
+    print(f"Applied changes to {len(files)} file(s)")
 
 
-# Detect if we're in CI environment or local
-def get_current_branch():
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True,
-        text=True
-    )
-    return result.stdout.strip()
+def is_repeating_strategy(iteration_history: list, window: int = 3) -> bool:
+    """
+    Detect if the same strategy is being repeated.
+    Returns True if the last 'window' iterations have the same strategy.
+    """
+    if len(iteration_history) < window:
+        return False
 
-def count_agent_commits():
-    """Count how many recent commits were made by agent-bot"""
-    result = subprocess.run(
-        ["git", "log", "--format=%an", "-10"],
-        capture_output=True,
-        text=True
-    )
-    commits = result.stdout.strip().split("\n")
-    agent_count = sum(1 for author in commits if author == "agent-bot")
-    return agent_count
+    recent_strategies = [
+        entry["strategy"]
+        for entry in iteration_history[-window:]
+    ]
 
-def is_ci_mode():
-    # Check if we're in CI by looking for CI environment variable or non-main branch
-    in_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
-    current_branch = get_current_branch()
-    on_feature_branch = current_branch not in ["main", "master"]
-    return in_ci or on_feature_branch
+    # Check if all recent strategies are identical
+    return len(set(recent_strategies)) == 1
 
-# Only create a new branch if NOT in CI mode
-if is_ci_mode():
-    print(f"Running in CI mode on branch: {get_current_branch()}")
-    current_branch = get_current_branch()
 
-    # Check for runaway loop - count agent-bot commits
-    agent_commit_count = count_agent_commits()
-    print(f"Found {agent_commit_count} recent agent-bot commits")
+def main():
+    """Main controller loop implementing multi-agent pipeline"""
 
-    if agent_commit_count >= 7:
-        print(f"ERROR: Too many agent-bot commits ({agent_commit_count}). Stopping to prevent runaway loop.")
-        print("The agent has already attempted to fix this issue 7 times.")
-        print("Manual intervention is required.")
-        exit(1)
+    print("=== Multi-Agent Autonomous Repair System ===\n")
 
-    # Configure git for CI environment
-    subprocess.run(["git", "config", "--global", "user.name", "agent-bot"])
-    subprocess.run(["git", "config", "--global", "user.email", "agent@bot.com"])
+    # Initialize agents
+    devops = DevOpsAgent()
+    agent_caller = AgentCaller()
 
-    # Get the PR number for the current branch
-    result = subprocess.run(
-        ["gh", "pr", "view", "--json", "number"],
-        capture_output=True,
-        text=True
-    )
-    pr_number = json.loads(result.stdout)["number"]
-    print(f"Fixing existing PR #{pr_number}")
-    first_commit_made = True  # Already on a PR branch
-else:
-    print("Running in local mode - creating new branch...")
-    create_gh_branch()
-    first_commit_made = False
-    pr_number = None
+    # Setup: Environment detection and initialization
+    if devops.is_ci_mode():
+        print(f"Running in CI mode on branch: {devops.current_branch}")
 
-ci_logs = None
+        # Safety: Check for runaway loop
+        devops.check_runaway_protection()
 
-# In CI mode, fetch the initial failed test logs instead of running locally
-if is_ci_mode():
-    print("Fetching failed test logs from CI...")
-    initial_ci_logs = get_failed_test_logs()
-    if initial_ci_logs:
-        ci_logs = "Initial CI Test Failure:\n\n" + initial_ci_logs
-        print("Successfully fetched CI test logs")
+        # Configure git for CI
+        devops.configure_git("agent-bot", "agent@bot.com")
+
+        # Get existing PR number
+        pr_number = devops.get_pr_number()
+        print(f"Fixing existing PR #{pr_number}")
+        first_commit_made = True
     else:
-        print("Warning: Could not fetch CI logs, will run tests locally")
+        print("Running in local mode - creating new branch...")
+        devops.create_branch()
+        pr_number = None
+        first_commit_made = False
 
-for iteration in range(MAX_ITERS):
-    print(f"\n=== Iteration {iteration + 1} ===")
-
-    # 1. Run local tests (skip if we already have CI logs from initial fetch)
-    if ci_logs and iteration == 0 and is_ci_mode():
-        print("Using fetched CI logs, skipping local test run")
-        code = 1  # Mark as failed to trigger Claude
-        output = ""
-    else:
-        code, output = run_tests()
-
-    # 2. If fail → ask Claude → apply changes → commit
-    if code != 0 or ci_logs:
-        print("Tests failed, consulting Claude...")
-
-        files = collect_files()
-        template = Path("prompt.md").read_text()
-
-        # Build prompt with local test output and/or CI logs
-        if ci_logs:
-            # Use CI logs (either from initial fetch or from subsequent CI runs)
-            test_section = "CI Test Failure Logs:\n\n" + ci_logs + "\n\nRevise the code to fix these issues."
-            prompt = template.replace("{{TEST_OUTPUT}}", "")
-            prompt = prompt.replace("{{CI_LOGS}}", test_section)
+    # Initial CI logs (if in CI mode)
+    ci_logs = ""
+    if devops.is_ci_mode():
+        print("Fetching failed test logs from CI...")
+        initial_ci_logs = devops.get_failed_test_logs()
+        if initial_ci_logs:
+            ci_logs = initial_ci_logs
+            print("Successfully fetched CI test logs")
         else:
-            # Use local test output
-            test_section = "The following tests failed:\n\n" + output
-            prompt = template.replace("{{TEST_OUTPUT}}", test_section)
-            prompt = prompt.replace("{{CI_LOGS}}", "")
+            print("Warning: Could not fetch CI logs, will run tests locally")
 
-        prompt = prompt.replace("{{FILE_CONTENTS}}", files)
+    # Track iteration history for reflection
+    iteration_history = []
+    previous_attempt_failed = False
+    previous_failure_reason = None
 
-        response = call_claude(prompt)
+    # Main iteration loop - Agent Governance Pattern
+    for iteration in range(MAX_ITERS):
+        print(f"\n{'='*60}")
+        print(f"=== Iteration {iteration + 1}/{MAX_ITERS} ===")
+        print(f"{'='*60}\n")
 
-        if response is None:
-            print("Failed to get response from Claude")
+        # Step 1: Run tests
+        # -----------------
+        if ci_logs and iteration == 0 and devops.is_ci_mode():
+            print("Using fetched CI logs, skipping local test run")
+            test_code = 1  # Mark as failed
+            test_output = ""
+        else:
+            print("Running tests...")
+            test_code, test_output = run_tests()
+
+        # Exit if tests pass
+        if test_code == 0 and not ci_logs:
+            print("\n✓ All tests passed!")
+            if pr_number:
+                devops.enable_auto_merge(pr_number)
             break
 
-        try:
-            # Parse the CLI output wrapper
-            cli_response = json.loads(response)
+        # Step 2: Collect repository state
+        # ---------------------------------
+        print("Collecting repository files...")
+        repo_state = collect_files()
 
-            # When using --json-schema, the output is in structured_output
-            if "structured_output" in cli_response:
-                parsed = cli_response["structured_output"]
-            else:
-                print("Unexpected response format from Claude")
-                print(response)
-                break
-        except Exception as e:
-            print(f"Invalid JSON from Claude: {e}")
-            print(f"Response: {response}")
+        # Step 3: Call Planner Agent
+        # ---------------------------
+        print("\n[PLANNER] Analyzing test failures...")
+        print(f"  Previous attempt failed: {previous_attempt_failed}")
+
+        plan = agent_caller.call_planner(
+            test_result=test_output,
+            ci_logs=ci_logs,
+            repo_state=repo_state,
+            previous_attempt_failed=previous_attempt_failed,
+            failure_reason=previous_failure_reason
+        )
+
+        print(f"[PLANNER] Strategy: {plan['strategy']}")
+        print(f"[PLANNER] Files to modify: {', '.join(plan['files_to_modify'])}")
+        print(f"[PLANNER] Needs new tests: {plan['needs_new_tests']}")
+        print(f"[PLANNER] Strategy changed: {plan['should_strategy_change']}")
+
+        # Track iteration history
+        iteration_history.append({
+            "iteration": iteration + 1,
+            "strategy": plan["strategy"],
+            "strategy_changed": plan.get("should_strategy_change", False)
+        })
+
+        # Detect infinite loops (same strategy 3+ times)
+        if is_repeating_strategy(iteration_history, window=3):
+            print("\n❌ ERROR: Strategy is repeating. Same approach tried 3 times.")
+            print("The agent appears stuck in a loop. Manual intervention required.")
             break
 
-        # Apply changes and commit
-        print(f"Applying changes to {len(parsed['files'])} file(s)...")
-        apply_changes(parsed["files"])
-        git_commit(parsed["commit_message"])
+        # Step 4: Call Coder Agent
+        # -------------------------
+        print("\n[CODER] Implementing repair plan...")
 
-    # 3. Push branch
-    if is_ci_mode():
-        # In CI mode: always force push to update existing PR
-        print("Force pushing to update existing PR...")
-        git_push(force=True)
-    else:
-        # Local mode: normal push first time, force push after
-        if first_commit_made:
-            print("Force pushing to update PR...")
-            git_push(force=True)
-        else:
-            print("Pushing to remote...")
-            git_push()
-            first_commit_made = True
+        changes = agent_caller.call_coder(
+            plan=plan,
+            repo_state=repo_state
+        )
 
-        # Create PR after first push (local mode only)
-        if pr_number is None:
-            print("Creating pull request...")
-            pr_number = create_pr()
+        print(f"[CODER] Modified {len(changes['files'])} file(s)")
+        print(f"[CODER] Commit message: {changes['commit_message']}")
 
-    # 4. Wait 30 seconds for CI
-    print("Waiting 30 seconds for CI to run...")
-    time.sleep(30)
+        # Step 5: Call Tester Agent (if needed)
+        # --------------------------------------
+        if plan.get("needs_new_tests", False):
+            print("\n[TESTER] Writing test cases...")
 
-    # 5. Check CI
-    print("Checking CI status...")
-    ci_status = get_pr_status(pr_number)
-    all_passed, checks = parse_ci_results(ci_status)
-
-    # 6. If failed → extract logs → feed back to Claude
-    if all_passed and checks:
-        print("All CI checks passed!")
-
-        # Enable auto-merge on the PR
-        if is_ci_mode() and pr_number:
-            print(f"Enabling auto-merge for PR #{pr_number}...")
-            merge_result = subprocess.run(
-                ["gh", "pr", "merge", str(pr_number),
-                 "--auto",
-                 "--delete-branch"],
-                capture_output=True,
-                text=True
+            test_changes = agent_caller.call_tester(
+                changes=changes,
+                repo_state=repo_state,
+                plan=plan
             )
 
-            if merge_result.returncode == 0:
-                print(f"✓ Auto-merge enabled for PR #{pr_number}")
-                print("PR will merge automatically when all checks pass and approvals are met")
+            print(f"[TESTER] Created/updated {len(test_changes['files'])} test file(s)")
+            print(f"[TESTER] Strategy: {test_changes['test_strategy']}")
+
+            # Merge test files into changes
+            changes["files"].extend(test_changes["files"])
+
+        # Step 6: Call Reviewer Agent
+        # ----------------------------
+        print("\n[REVIEWER] Reviewing changes...")
+
+        review = agent_caller.call_reviewer(
+            repo_state=repo_state,
+            changes=changes,
+            test_result=test_output or ci_logs
+        )
+
+        # Handle review decision
+        if not review["approved"]:
+            print(f"[REVIEWER] ❌ REJECTED - {len(review['issues'])} issue(s) found")
+            print(f"[REVIEWER] Feedback: {review['feedback']}")
+
+            # Log issues
+            for issue in review['issues']:
+                print(f"  - {issue['file']}:{issue['line']} - {issue['issue']}")
+
+            # Feed rejection back to Planner for next iteration
+            previous_attempt_failed = True
+            previous_failure_reason = f"Reviewer rejected: {review['feedback']}"
+
+            # Continue loop - Planner will see rejection and adjust
+            continue
+
+        print("[REVIEWER] ✓ APPROVED")
+        print(f"[REVIEWER] Feedback: {review['feedback']}")
+
+        # Step 7: DevOps Agent - Apply and commit
+        # ----------------------------------------
+        print("\n[DEVOPS] Applying changes and committing...")
+
+        apply_changes(changes["files"])
+        devops.commit_changes(changes["commit_message"])
+
+        # Push changes
+        if devops.is_ci_mode():
+            devops.push_changes(force=True)
+        else:
+            if first_commit_made:
+                devops.push_changes(force=True)
             else:
-                print(f"Warning: Could not enable auto-merge: {merge_result.stderr}")
-                print("PR may require manual review or approval")
+                devops.push_changes(force=False)
+                first_commit_made = True
 
-        break
-    else:
-        print("CI checks failed, extracting logs...")
-        ci_logs = extract_ci_logs(checks)
+        # Create PR if needed (local mode only)
+        if pr_number is None:
+            print("[DEVOPS] Creating pull request...")
+            pr_number = devops.create_pr(
+                title="Autonomous Fix - Multi-Agent System",
+                body="Generated by multi-agent autonomous repair system\n\n" +
+                     f"Strategy: {plan['strategy']}\n\n" +
+                     f"Files modified: {', '.join([f['path'] for f in changes['files']])}"
+            )
 
-        # Get detailed logs from the latest workflow run
-        print("Fetching detailed workflow logs...")
-        run_logs = get_latest_run_logs()
-        ci_logs += f"\n\nWorkflow Run Logs:\n{run_logs}"
-        # 7. Repeat (continue loop)
+        # Step 8: Wait for CI and check results
+        # --------------------------------------
+        devops.wait_for_ci(30)
 
-print("Done.")
+        print("[DEVOPS] Checking CI status...")
+        ci_status = devops.get_pr_status(pr_number)
+
+        if ci_status['all_passed'] and ci_status['checks']:
+            print("\n✓ All CI checks passed!")
+
+            # Enable auto-merge
+            if devops.is_ci_mode() and pr_number:
+                devops.enable_auto_merge(pr_number)
+
+            break
+        else:
+            print("CI checks failed, extracting logs...")
+
+            # Extract failure logs for next iteration
+            ci_logs = devops.extract_ci_logs(ci_status['checks'])
+
+            # Get detailed workflow logs
+            print("Fetching detailed workflow logs...")
+            run_logs = devops.get_latest_run_logs()
+            ci_logs += f"\n\nWorkflow Run Logs:\n{run_logs}"
+
+            # Mark as failed for next iteration
+            previous_attempt_failed = True
+            previous_failure_reason = "CI checks failed"
+
+            # Loop continues with updated CI logs
+
+    # End of iteration loop
+    print("\n" + "="*60)
+    print("=== Autonomous Repair Session Complete ===")
+    print("="*60)
+
+    # Print summary
+    print(f"\nTotal iterations: {len(iteration_history)}")
+    print(f"Final status: {'SUCCESS' if test_code == 0 or ci_status.get('all_passed') else 'INCOMPLETE'}")
+
+
+if __name__ == "__main__":
+    main()

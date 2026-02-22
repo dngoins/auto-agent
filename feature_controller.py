@@ -1,0 +1,420 @@
+"""
+Feature Development Controller - Orchestrates the feature development pipeline.
+
+Architecture:
+    RequirementsGather → AcceptanceCriteria → ArchitectPlanner →
+    TechnicalPlanner → Coder → Tester → Reviewer → DevOps
+
+This controller manages new feature development from requirements to implementation.
+"""
+
+import json
+import sys
+from pathlib import Path
+from typing import Optional
+
+from devops_agent import DevOpsAgent
+from agent_caller import AgentCaller
+from contracts import (
+    RequirementsGatherOutput,
+    AcceptanceCriteriaOutput,
+    ArchitectPlannerOutput,
+    TechnicalPlannerOutput,
+    CoderOutput,
+    ReviewerOutput
+)
+
+
+def collect_files() -> dict:
+    """
+    Collect all Python files in the repository.
+    Returns dict of {path: content}
+    """
+    files_data = {}
+    for file in Path(".").glob("**/*.py"):
+        # Skip certain directories
+        if any(skip in str(file) for skip in [".venv", "__pycache__", "controller"]):
+            continue
+        try:
+            files_data[str(file)] = file.read_text()
+        except Exception as e:
+            print(f"Warning: Could not read {file}: {e}")
+    return files_data
+
+
+def apply_changes(files: list) -> None:
+    """Apply file changes to disk"""
+    for file in files:
+        file_path = Path(file["path"])
+        # Create parent directories if needed
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(file["content"])
+    print(f"Applied changes to {len(files)} file(s)")
+
+
+def display_gherkin_scenarios(scenarios: list) -> None:
+    """Display Gherkin scenarios for user review"""
+    print("\n" + "="*60)
+    print("GHERKIN SCENARIOS")
+    print("="*60)
+    for i, scenario in enumerate(scenarios, 1):
+        print(f"\n--- Scenario {i} ---")
+        print(scenario)
+
+
+def display_clarification_questions(questions: list) -> list:
+    """Display questions and get user answers"""
+    print("\n" + "="*60)
+    print("CLARIFICATION QUESTIONS")
+    print("="*60)
+
+    answers = []
+    for i, q in enumerate(questions, 1):
+        print(f"\n[Question {i}]")
+        print(f"Context: {q['context']}")
+        print(f"\nQuestion: {q['question']}")
+
+        if q['suggested_answers']:
+            print("\nSuggested answers:")
+            for j, answer in enumerate(q['suggested_answers'], 1):
+                print(f"  {j}. {answer}")
+
+        print("\nYour answer:")
+        answer = input("> ")
+        answers.append(answer)
+
+    return answers
+
+
+def display_acceptance_criteria(ac_output: AcceptanceCriteriaOutput) -> None:
+    """Display acceptance criteria for user review"""
+    print("\n" + "="*60)
+    print("ACCEPTANCE CRITERIA")
+    print("="*60)
+
+    print("\nCriteria:")
+    for i, criterion in enumerate(ac_output['acceptance_criteria'], 1):
+        print(f"\n{i}. {criterion['criterion']}")
+        print(f"   Type: {criterion['test_type']}")
+        print(f"   Rationale: {criterion['rationale']}")
+
+    print("\n\nDefinition of Done:")
+    for item in ac_output['definition_of_done']:
+        print(f"  ✓ {item}")
+
+    print("\n\nRisk Areas:")
+    for risk in ac_output['risk_areas']:
+        print(f"  ⚠ {risk}")
+
+
+def display_technical_design(arch_output: ArchitectPlannerOutput) -> None:
+    """Display technical design for user review"""
+    print("\n" + "="*60)
+    print("TECHNICAL DESIGN")
+    print("="*60)
+
+    print(f"\n{arch_output['technical_design']}")
+
+    print("\n\nDesign Decisions:")
+    for decision in arch_output['design_decisions']:
+        print(f"\n• {decision['aspect']}")
+        print(f"  Decision: {decision['decision']}")
+        print(f"  Rationale: {decision['rationale']}")
+
+    print("\n\nFiles to Create:")
+    for file in arch_output['files_to_create']:
+        print(f"  + {file}")
+
+    print("\n\nFiles to Modify:")
+    for file in arch_output['files_to_modify']:
+        print(f"  ~ {file}")
+
+    if arch_output['dependencies_needed']:
+        print("\n\nDependencies Needed:")
+        for dep in arch_output['dependencies_needed']:
+            print(f"  - {dep}")
+
+    if arch_output.get('design_diagrams'):
+        print("\n\nDesign Diagrams:")
+        print(arch_output['design_diagrams'])
+
+
+def display_implementation_plan(plan_output: TechnicalPlannerOutput) -> None:
+    """Display implementation plan for user review"""
+    print("\n" + "="*60)
+    print("IMPLEMENTATION PLAN")
+    print("="*60)
+
+    print(f"\n{plan_output['implementation_plan']}")
+
+    print("\n\nImplementation Steps:")
+    for step in plan_output['implementation_steps']:
+        deps = f" (depends on: {', '.join(map(str, step['dependencies']))})" if step['dependencies'] else ""
+        print(f"\n{step['step_number']}. {step['description']}")
+        print(f"   Files: {', '.join(step['files_affected'])}")
+        print(f"   Complexity: {step['estimated_complexity']}{deps}")
+
+    print(f"\n\nStrategy: {plan_output['strategy']}")
+    print(f"Test Strategy: {plan_output['test_strategy']}")
+
+
+def get_user_approval(prompt: str) -> bool:
+    """Get user approval to proceed"""
+    while True:
+        response = input(f"\n{prompt} (yes/no): ").lower().strip()
+        if response in ['yes', 'y']:
+            return True
+        elif response in ['no', 'n']:
+            return False
+        else:
+            print("Please answer 'yes' or 'no'")
+
+
+def main():
+    """Main feature development pipeline"""
+
+    print("="*60)
+    print("FEATURE DEVELOPMENT PIPELINE")
+    print("="*60)
+
+    # Initialize agents
+    devops = DevOpsAgent()
+    agent_caller = AgentCaller()
+
+    # Get requirements from user
+    print("\nEnter your feature requirements (Gherkin or free form).")
+    print("Press Ctrl+D (Unix) or Ctrl+Z (Windows) when done:\n")
+
+    requirements_lines = []
+    try:
+        while True:
+            line = input()
+            requirements_lines.append(line)
+    except EOFError:
+        pass
+
+    raw_requirements = "\n".join(requirements_lines)
+
+    if not raw_requirements.strip():
+        print("Error: No requirements provided")
+        return
+
+    # ========================================================================
+    # PHASE 1: Requirements Gathering
+    # ========================================================================
+
+    print("\n[REQUIREMENTS GATHER] Processing requirements...")
+
+    requirements_output = agent_caller.call_requirements_gather(
+        raw_requirements=raw_requirements
+    )
+
+    display_gherkin_scenarios(requirements_output['gherkin_scenarios'])
+
+    # Handle clarification questions
+    while requirements_output['needs_clarification']:
+        user_answers = display_clarification_questions(
+            requirements_output['clarification_questions']
+        )
+
+        print("\n[REQUIREMENTS GATHER] Refining requirements with your answers...")
+
+        requirements_output = agent_caller.call_requirements_gather(
+            raw_requirements=raw_requirements,
+            previous_questions=[q['question'] for q in requirements_output['clarification_questions']],
+            user_answers=user_answers
+        )
+
+        display_gherkin_scenarios(requirements_output['gherkin_scenarios'])
+
+    # Save Gherkin scenarios
+    gherkin_file = Path("requirements.gherkin")
+    gherkin_file.write_text("\n\n".join(requirements_output['gherkin_scenarios']))
+    print(f"\n✓ Saved Gherkin scenarios to {gherkin_file}")
+
+    if not get_user_approval("Proceed to acceptance criteria?"):
+        print("Stopped by user")
+        return
+
+    # ========================================================================
+    # PHASE 2: Acceptance Criteria
+    # ========================================================================
+
+    print("\n[ACCEPTANCE CRITERIA] Creating acceptance criteria...")
+
+    ac_output = agent_caller.call_acceptance_criteria(
+        gherkin_scenarios=requirements_output['gherkin_scenarios'],
+        requirements_summary=requirements_output['requirements_summary']
+    )
+
+    display_acceptance_criteria(ac_output)
+
+    if not get_user_approval("Proceed to technical design?"):
+        print("Stopped by user")
+        return
+
+    # ========================================================================
+    # PHASE 3: Architecture Planning
+    # ========================================================================
+
+    print("\n[ARCHITECT PLANNER] Designing technical architecture...")
+
+    # Collect existing codebase
+    repo_state = collect_files()
+    print(f"Analyzed {len(repo_state)} files in codebase")
+
+    arch_output = agent_caller.call_architect_planner(
+        gherkin_scenarios=requirements_output['gherkin_scenarios'],
+        acceptance_criteria=ac_output['acceptance_criteria'],
+        repo_state=repo_state
+    )
+
+    display_technical_design(arch_output)
+
+    if not get_user_approval("Proceed to implementation planning?"):
+        print("Stopped by user")
+        return
+
+    # ========================================================================
+    # PHASE 4: Technical Planning
+    # ========================================================================
+
+    print("\n[TECHNICAL PLANNER] Creating implementation plan...")
+
+    tech_plan = agent_caller.call_technical_planner(
+        technical_design=arch_output['technical_design'],
+        design_decisions=arch_output['design_decisions'],
+        files_to_create=arch_output['files_to_create'],
+        files_to_modify=arch_output['files_to_modify'],
+        repo_state=repo_state
+    )
+
+    display_implementation_plan(tech_plan)
+
+    if not get_user_approval("Proceed to implementation?"):
+        print("Stopped by user")
+        return
+
+    # ========================================================================
+    # PHASE 5: Implementation (Coder Agent)
+    # ========================================================================
+
+    print("\n[CODER] Implementing the feature...")
+
+    # Prepare plan for Coder (convert TechnicalPlanner output to Planner-like format)
+    coder_plan = {
+        "analysis": tech_plan['implementation_plan'],
+        "files_to_modify": tech_plan['files_to_modify'],
+        "strategy": tech_plan['strategy']
+    }
+
+    changes = agent_caller.call_coder(
+        plan=coder_plan,
+        repo_state=repo_state
+    )
+
+    print(f"[CODER] Generated changes for {len(changes['files'])} file(s)")
+
+    # ========================================================================
+    # PHASE 6: Testing (Tester Agent)
+    # ========================================================================
+
+    if tech_plan.get('needs_new_tests', False):
+        print("\n[TESTER] Writing test cases...")
+
+        test_changes = agent_caller.call_tester(
+            changes=changes,
+            repo_state=repo_state,
+            plan={'coverage_gaps': [tech_plan['test_strategy']]}
+        )
+
+        print(f"[TESTER] Created {len(test_changes['files'])} test file(s)")
+
+        # Merge test files into changes
+        changes['files'].extend(test_changes['files'])
+
+    # ========================================================================
+    # PHASE 7: Review (Reviewer Agent)
+    # ========================================================================
+
+    print("\n[REVIEWER] Reviewing implementation...")
+
+    review = agent_caller.call_reviewer(
+        repo_state=repo_state,
+        changes=changes,
+        test_result=""  # No test failures yet
+    )
+
+    if not review['approved']:
+        print(f"\n[REVIEWER] ❌ REJECTED")
+        print(f"Feedback: {review['feedback']}")
+        for issue in review['issues']:
+            print(f"  - {issue['file']}:{issue['line']} - {issue['issue']}")
+        print("\nImplementation needs revision. Exiting.")
+        return
+
+    print(f"\n[REVIEWER] ✓ APPROVED")
+    print(f"Feedback: {review['feedback']}")
+
+    # ========================================================================
+    # PHASE 8: Apply Changes and Commit
+    # ========================================================================
+
+    print("\nFiles to be modified:")
+    for file in changes['files']:
+        print(f"  - {file['path']}")
+
+    if not get_user_approval("Apply changes and create commit?"):
+        print("Stopped by user")
+        return
+
+    # Apply changes
+    apply_changes(changes['files'])
+
+    # Git operations
+    if devops.is_ci_mode():
+        print("Running in CI mode")
+    else:
+        print("\n[DEVOPS] Creating feature branch...")
+        devops.create_branch()
+
+    print("[DEVOPS] Committing changes...")
+    devops.commit_changes(changes['commit_message'])
+
+    print("[DEVOPS] Pushing to remote...")
+    devops.push_changes()
+
+    # Create PR
+    if not devops.is_ci_mode():
+        print("[DEVOPS] Creating pull request...")
+
+        pr_body = f"""# {requirements_output['requirements_summary']}
+
+## Gherkin Scenarios
+
+{chr(10).join('- ' + s.split(chr(10))[0] for s in requirements_output['gherkin_scenarios'])}
+
+## Technical Design
+
+{arch_output['technical_design']}
+
+## Implementation Steps
+
+{len(tech_plan['implementation_steps'])} steps completed
+
+---
+
+Generated by multi-agent feature development pipeline
+"""
+
+        pr_number = devops.create_pr(
+            title=f"Feature: {requirements_output['requirements_summary']}",
+            body=pr_body
+        )
+
+        print(f"\n✓ Feature development complete!")
+        print(f"PR #{pr_number} created and ready for review")
+
+
+if __name__ == "__main__":
+    main()
