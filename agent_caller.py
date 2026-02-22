@@ -15,10 +15,16 @@ from typing import Optional
 import fnmatch
 
 from contracts import (
+    # Bug fix pipeline
     PlannerInput, PlannerOutput, PLANNER_SCHEMA,
     CoderInput, CoderOutput, CODER_SCHEMA,
     TesterInput, TesterOutput, TESTER_SCHEMA,
-    ReviewerInput, ReviewerOutput, REVIEWER_SCHEMA
+    ReviewerInput, ReviewerOutput, REVIEWER_SCHEMA,
+    # Feature development pipeline
+    RequirementsGatherInput, RequirementsGatherOutput, REQUIREMENTS_GATHER_SCHEMA,
+    AcceptanceCriteriaInput, AcceptanceCriteriaOutput, ACCEPTANCE_CRITERIA_SCHEMA,
+    ArchitectPlannerInput, ArchitectPlannerOutput, ARCHITECT_PLANNER_SCHEMA,
+    TechnicalPlannerInput, TechnicalPlannerOutput, TECHNICAL_PLANNER_SCHEMA
 )
 
 
@@ -317,6 +323,248 @@ Output your response as raw JSON only (no markdown, no explanations):
 ## Test Output
 
 {test_output}
+
+Output your response as raw JSON only (no markdown, no explanations):
+"""
+        return prompt
+
+    # ========================================================================
+    # FEATURE DEVELOPMENT AGENTS
+    # ========================================================================
+
+    def call_requirements_gather(
+        self,
+        raw_requirements: str,
+        previous_questions: Optional[list] = None,
+        user_answers: Optional[list] = None
+    ) -> RequirementsGatherOutput:
+        """
+        Call RequirementsGather agent to transform raw requirements into Gherkin.
+
+        Role Isolation:
+        - GETS: Raw requirements, previous Q&A context
+        - NO ACCESS TO: Codebase, implementation details
+        """
+        prompt = self._build_requirements_gather_prompt(
+            raw_requirements=raw_requirements,
+            previous_questions=previous_questions,
+            user_answers=user_answers
+        )
+
+        response = self._call_claude(prompt, REQUIREMENTS_GATHER_SCHEMA)
+        return response
+
+    def call_acceptance_criteria(
+        self,
+        gherkin_scenarios: list,
+        requirements_summary: str
+    ) -> AcceptanceCriteriaOutput:
+        """
+        Call AcceptanceCriteria agent to create testable acceptance criteria.
+
+        Role Isolation:
+        - GETS: Gherkin scenarios, requirements summary
+        - NO ACCESS TO: Codebase, implementation details
+        """
+        prompt = self._build_acceptance_criteria_prompt(
+            gherkin_scenarios=gherkin_scenarios,
+            requirements_summary=requirements_summary
+        )
+
+        response = self._call_claude(prompt, ACCEPTANCE_CRITERIA_SCHEMA)
+        return response
+
+    def call_architect_planner(
+        self,
+        gherkin_scenarios: list,
+        acceptance_criteria: list,
+        repo_state: dict
+    ) -> ArchitectPlannerOutput:
+        """
+        Call ArchitectPlanner agent to design technical architecture.
+
+        Role Isolation:
+        - GETS: Gherkin scenarios, acceptance criteria, existing codebase
+        - NO ACCESS TO: Implementation details, test output
+        """
+        # Filter repository files (only Python files for context)
+        filtered_files = self._filter_files(repo_state, ["*.py"])
+
+        prompt = self._build_architect_planner_prompt(
+            gherkin_scenarios=gherkin_scenarios,
+            acceptance_criteria=acceptance_criteria,
+            repository_files=filtered_files
+        )
+
+        response = self._call_claude(prompt, ARCHITECT_PLANNER_SCHEMA)
+        return response
+
+    def call_technical_planner(
+        self,
+        technical_design: str,
+        design_decisions: list,
+        files_to_create: list,
+        files_to_modify: list,
+        repo_state: dict
+    ) -> TechnicalPlannerOutput:
+        """
+        Call TechnicalPlanner agent to create implementation plan.
+
+        Role Isolation:
+        - GETS: Technical design, files to create/modify, existing codebase
+        - NO ACCESS TO: Test output, CI logs
+        """
+        # Get specific files that will be modified
+        filtered_files = self._get_specific_files(repo_state, files_to_modify)
+
+        prompt = self._build_technical_planner_prompt(
+            technical_design=technical_design,
+            design_decisions=design_decisions,
+            files_to_create=files_to_create,
+            files_to_modify=files_to_modify,
+            repository_files=filtered_files
+        )
+
+        response = self._call_claude(prompt, TECHNICAL_PLANNER_SCHEMA)
+        return response
+
+    # ========================================================================
+    # FEATURE DEVELOPMENT PROMPT BUILDERS
+    # ========================================================================
+
+    def _build_requirements_gather_prompt(
+        self,
+        raw_requirements: str,
+        previous_questions: Optional[list],
+        user_answers: Optional[list]
+    ) -> str:
+        """Build prompt for RequirementsGather agent"""
+        template = (self.prompt_dir / "requirements_gather.md").read_text()
+
+        # Format previous Q&A if exists
+        qa_context = ""
+        if previous_questions and user_answers:
+            qa_context = "\n## Previous Questions and Answers\n\n"
+            for q, a in zip(previous_questions, user_answers):
+                qa_context += f"Q: {q}\nA: {a}\n\n"
+
+        prompt = f"""{template}
+
+## Raw Requirements
+
+{raw_requirements}
+
+{qa_context}
+
+Output your response as raw JSON only (no markdown, no explanations):
+"""
+        return prompt
+
+    def _build_acceptance_criteria_prompt(
+        self,
+        gherkin_scenarios: list,
+        requirements_summary: str
+    ) -> str:
+        """Build prompt for AcceptanceCriteria agent"""
+        template = (self.prompt_dir / "acceptance_criteria.md").read_text()
+
+        # Format Gherkin scenarios
+        scenarios_text = "\n\n".join(gherkin_scenarios)
+
+        prompt = f"""{template}
+
+## Requirements Summary
+
+{requirements_summary}
+
+## Gherkin Scenarios
+
+{scenarios_text}
+
+Output your response as raw JSON only (no markdown, no explanations):
+"""
+        return prompt
+
+    def _build_architect_planner_prompt(
+        self,
+        gherkin_scenarios: list,
+        acceptance_criteria: list,
+        repository_files: dict
+    ) -> str:
+        """Build prompt for ArchitectPlanner agent"""
+        template = (self.prompt_dir / "architect_planner.md").read_text()
+
+        # Format Gherkin scenarios
+        scenarios_text = "\n\n".join(gherkin_scenarios)
+
+        # Format acceptance criteria
+        criteria_text = ""
+        for ac in acceptance_criteria:
+            criteria_text += f"- {ac['criterion']} ({ac['test_type']})\n"
+            criteria_text += f"  Rationale: {ac['rationale']}\n\n"
+
+        # Format repository files
+        files_text = self._format_files(repository_files)
+
+        prompt = f"""{template}
+
+## Gherkin Scenarios
+
+{scenarios_text}
+
+## Acceptance Criteria
+
+{criteria_text}
+
+## Existing Codebase
+
+{files_text}
+
+Output your response as raw JSON only (no markdown, no explanations):
+"""
+        return prompt
+
+    def _build_technical_planner_prompt(
+        self,
+        technical_design: str,
+        design_decisions: list,
+        files_to_create: list,
+        files_to_modify: list,
+        repository_files: dict
+    ) -> str:
+        """Build prompt for TechnicalPlanner agent"""
+        template = (self.prompt_dir / "technical_planner.md").read_text()
+
+        # Format design decisions
+        decisions_text = ""
+        for decision in design_decisions:
+            decisions_text += f"**{decision['aspect']}**: {decision['decision']}\n"
+            decisions_text += f"Rationale: {decision['rationale']}\n\n"
+
+        # Format files
+        files_text = self._format_files(repository_files)
+
+        prompt = f"""{template}
+
+## Technical Design
+
+{technical_design}
+
+## Design Decisions
+
+{decisions_text}
+
+## Files to Create
+
+{', '.join(files_to_create)}
+
+## Files to Modify
+
+{', '.join(files_to_modify)}
+
+## Existing Files (to be modified)
+
+{files_text}
 
 Output your response as raw JSON only (no markdown, no explanations):
 """
