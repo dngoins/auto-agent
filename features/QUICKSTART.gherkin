@@ -1,0 +1,45 @@
+# Quick Start Template - Simple Feature Requirements
+# Just fill in the blanks below!
+
+Feature: [What feature are you building?]
+  As a [who is the user?]
+  I want to [what do they want to do?]
+  So that [why do they want to do it?]
+
+  Scenario: [Happy path - describe the main success case]
+    Given [what's the starting situation?]
+    When [what action does the user take?]
+    Then [what should happen?]
+
+  Scenario: [Error case - what could go wrong?]
+    Given [what's the error situation?]
+    When [what triggers the error?]
+    Then [how should the system respond?]
+
+
+# ============================================
+# REAL EXAMPLE: Copy this pattern
+# ============================================
+
+# Feature: Todo List
+#   As a busy professional
+#   I want to manage my daily tasks
+#   So that I can stay organized
+#
+#   Scenario: Add a new task
+#     Given I am on the todo list page
+#     When I type "Buy groceries" into the task input
+#     And I click the "Add" button
+#     Then the task "Buy groceries" should appear in my list
+#     And the input field should be cleared
+#
+#   Scenario: Mark task as complete
+#     Given I have a task "Buy groceries" in my list
+#     When I click the checkbox next to "Buy groceries"
+#     Then the task should be marked as complete
+#     And the task should show a strikethrough
+#
+#   Scenario: Delete a task
+#     Given I have a task "Buy groceries" in my list
+#     When I click the delete button next to "Buy groceries"
+#     Then the task should be removed from the list

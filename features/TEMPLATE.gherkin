@@ -1,0 +1,140 @@
+# Feature Requirements Template
+#
+# Fill in this template with your feature idea. You can:
+# 1. Use this template and push to GitHub (triggers automatically)
+# 2. Copy to a new .gherkin file in features/ directory
+# 3. Create a GitHub issue and paste the content (add 'auto-implement' label)
+# 4. Use with CLI: python feature_controller.py --requirements-file features/TEMPLATE.gherkin
+#
+# Tips:
+# - Be specific about user actions and expected outcomes
+# - Include edge cases and error scenarios
+# - One feature per file works best
+# - Multiple scenarios are encouraged
+# - Use "Given/When/Then" format for clarity
+
+Feature: [Feature Name - Short, descriptive title]
+  As a [type of user]
+  I want to [goal/desire]
+  So that [benefit/value]
+
+  # Background (optional): Common setup for all scenarios
+  Background:
+    Given [common precondition that applies to all scenarios]
+    And [another common precondition]
+
+  # Scenario 1: Happy path - the main success scenario
+  Scenario: [Descriptive scenario name - what succeeds]
+    Given [precondition - the starting state]
+    And [another precondition if needed]
+    When [action - what the user does]
+    And [another action if needed]
+    Then [expected outcome - what should happen]
+    And [another expected outcome]
+
+  # Scenario 2: Alternative path or edge case
+  Scenario: [Another scenario - edge case or alternative]
+    Given [different starting state]
+    When [different action]
+    Then [different expected outcome]
+
+  # Scenario 3: Error case - what happens when things go wrong
+  Scenario: [Error scenario - what fails gracefully]
+    Given [precondition that leads to error]
+    When [action that triggers error]
+    Then [error handling - how system responds]
+    And [user feedback - what user sees]
+
+  # Add more scenarios as needed to cover:
+  # - Different user types
+  # - Edge cases
+  # - Error conditions
+  # - Security considerations
+  # - Performance requirements
+
+
+# ==============================================================================
+# EXAMPLE: Filled-in template
+# ==============================================================================
+
+# Feature: User Authentication
+#   As a user
+#   I want to log in securely with my email and password
+#   So that I can access my personalized dashboard
+#
+#   Background:
+#     Given the application is running
+#     And the database is accessible
+#
+#   Scenario: Successful login with valid credentials
+#     Given a user exists with email "user@example.com" and password "SecurePass123"
+#     And the user is not currently logged in
+#     When the user enters email "user@example.com"
+#     And the user enters password "SecurePass123"
+#     And the user clicks the "Log In" button
+#     Then the user should be redirected to "/dashboard"
+#     And the user should see a welcome message "Welcome back!"
+#     And a session token should be created
+#
+#   Scenario: Failed login with incorrect password
+#     Given a user exists with email "user@example.com"
+#     When the user enters email "user@example.com"
+#     And the user enters password "WrongPassword"
+#     And the user clicks the "Log In" button
+#     Then the user should remain on the login page
+#     And an error message should display "Invalid email or password"
+#     And no session token should be created
+#
+#   Scenario: Failed login with non-existent email
+#     Given no user exists with email "nobody@example.com"
+#     When the user enters email "nobody@example.com"
+#     And the user enters password "AnyPassword"
+#     And the user clicks the "Log In" button
+#     Then the user should remain on the login page
+#     And an error message should display "Invalid email or password"
+#     And the error should not reveal whether the email exists
+#
+#   Scenario: Account lockout after multiple failed attempts
+#     Given a user exists with email "user@example.com"
+#     And the user has failed to log in 4 times in the last 10 minutes
+#     When the user enters email "user@example.com"
+#     And the user enters password "WrongPassword"
+#     And the user clicks the "Log In" button
+#     Then the user should see an error "Account temporarily locked. Try again in 15 minutes."
+#     And the account should be locked for 15 minutes
+#     And a notification email should be sent to "user@example.com"
+
+
+# ==============================================================================
+# QUICK REFERENCE: Gherkin Keywords
+# ==============================================================================
+#
+# Feature: High-level description of a software feature
+# Background: Common steps that run before each scenario
+# Scenario: Specific example/test case
+# Given: Preconditions (initial context/state)
+# When: Action/event that triggers behavior
+# Then: Expected outcome/result
+# And: Additional step (same type as previous)
+# But: Negative assertion (alternative to And)
+# Scenario Outline: Template for multiple scenarios with examples
+# Examples: Data table for Scenario Outline
+#
+# ==============================================================================
+# BEST PRACTICES
+# ==============================================================================
+#
+# ✓ DO:
+# - Write from the user's perspective
+# - Be specific and concrete
+# - Include positive and negative scenarios
+# - Focus on behavior, not implementation
+# - Use present tense
+# - One action per When step when possible
+#
+# ✗ DON'T:
+# - Use technical jargon unnecessarily
+# - Describe UI implementation details
+# - Make scenarios too long (split into multiple)
+# - Assume knowledge - be explicit
+# - Write vague expectations
