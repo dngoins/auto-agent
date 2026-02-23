@@ -581,14 +581,20 @@ Output your response as raw JSON only (no markdown, no explanations):
             input=prompt,
             text=True,
             capture_output=True,
-            shell=True
+            shell=False
         )
 
         if result.returncode != 0:
             print(f"Error calling Claude: {result.stderr}")
+            print(f"Command output: {result.stdout}")
             raise Exception(f"Claude call failed: {result.stderr}")
 
-        response = json.loads(result.stdout)
+        try:
+            response = json.loads(result.stdout)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse Claude response as JSON: {e}")
+            print(f"Raw stdout (first 500 chars): {result.stdout[:500]}")
+            raise Exception(f"Invalid JSON from Claude: {e}")
 
         # When using --json-schema, the output is in structured_output
         if "structured_output" in response:
