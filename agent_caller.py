@@ -581,7 +581,7 @@ Output your response as raw JSON only (no markdown, no explanations):
             input=prompt,
             text=True,
             capture_output=True,
-            shell=False
+            shell=True
         )
 
         if result.returncode != 0:
