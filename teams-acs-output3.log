@@ -1,0 +1,706 @@
+============================================================
+FEATURE DEVELOPMENT PIPELINE
+============================================================
+
+[REQUIREMENTS GATHER] Processing requirements...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight or Janet without manual intervention
+
+Scenario: Automatically answer incoming call
+  Given a caller dials the ACS phone number
+  When the call is received by the system
+  Then the call should be automatically answered within 3 seconds
+  And the caller should hear a greeting message
+
+--- Scenario 2 ---
+Scenario: Prompt caller with routing options
+  Given the call has been answered
+  When the greeting message finishes playing
+  Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet."
+  And the system should listen for DTMF input
+
+--- Scenario 3 ---
+Scenario: Route call to Dwight when option 1 is selected
+  Given the caller has heard the menu options
+  When the caller presses 1
+  Then the system should transfer the call to Dwight's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 4 ---
+Scenario: Route call to Janet when option 2 is selected
+  Given the caller has heard the menu options
+  When the caller presses 2
+  Then the system should transfer the call to Janet's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 5 ---
+Scenario: Handle invalid keypad input
+  Given the caller has heard the menu options
+  When the caller presses a key other than 1 or 2
+  Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight or 2 for Janet."
+  And the caller should be allowed up to 3 retry attempts
+
+--- Scenario 6 ---
+Scenario: Handle no input timeout
+  Given the caller has heard the menu options
+  When no input is received within 5 seconds
+  Then the system should repeat the menu prompt
+  And the caller should be allowed up to 3 attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected with message "We were unable to connect you. Please try again later. Goodbye."
+
+--- Scenario 7 ---
+Scenario: Use AI-generated voice for prompts
+  Given AI voice generation is enabled
+  When the system generates greeting or menu prompts
+  Then the speech should be dynamically generated using the configured AI model
+  And speech latency should not exceed 2 seconds
+  And the voice should sound clear and natural
+
+--- Scenario 8 ---
+Scenario: Log call activity for observability
+  Given any call interaction occurs
+  When a call is answered, routed, or terminated
+  Then the system should log the timestamp
+  And the system should log caller ID if available
+  And the system should log selected menu option
+  And the system should log transfer destination
+  And the system should log call duration
+
+--- Scenario 9 ---
+Scenario: Support concurrent calls
+  Given multiple callers dial simultaneously
+  When up to 5 concurrent calls are active
+  Then the system should answer and process each call independently
+  And routing latency should not exceed 5 seconds per call
+
+--- Scenario 10 ---
+Scenario: Ensure secure communications
+  Given a call is processed by the system
+  When signaling and media are transmitted
+  Then all communications should be encrypted using TLS
+  And access to logs and configuration should require authenticated access
+
+[CLARIFICATION ROUND 1/3]
+[CI MODE] Auto-answering 4 clarification questions
+Q: What should happen if Dwight or Janet don't answer the transferred call?
+A: Send to voicemail after 30 seconds
+Q: Which AI service should be used for voice generation - OpenAI or Azure AI Foundry?
+A: OpenAI text-to-speech API
+Q: What should happen when more than 5 concurrent calls arrive?
+A: Play busy signal and disconnect
+Q: Should the system operate 24/7 or only during specific business hours?
+A: 24/7 operation
+
+[REQUIREMENTS GATHER] Refining requirements with your answers...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight or Janet without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight and Janet
+    And the OpenAI text-to-speech API is available for voice generation
+    And logging is configured in Azure Monitor or Application Insights
+    And the system operates 24/7
+
+--- Scenario 2 ---
+Scenario: Automatically answer incoming call
+  Given a caller dials the ACS phone number
+  When the call is received by the system
+  Then the call should be automatically answered within 3 seconds
+  And the caller should hear a greeting message
+
+--- Scenario 3 ---
+Scenario: Prompt caller with routing options
+  Given the call has been answered
+  When the greeting message finishes playing
+  Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet."
+  And the system should listen for DTMF input
+
+--- Scenario 4 ---
+Scenario: Route call to Dwight when option 1 is selected
+  Given the caller has heard the menu options
+  When the caller presses 1
+  Then the system should transfer the call to Dwight's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 5 ---
+Scenario: Route call to Janet when option 2 is selected
+  Given the caller has heard the menu options
+  When the caller presses 2
+  Then the system should transfer the call to Janet's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 6 ---
+Scenario: Handle unanswered transfer - send to voicemail
+  Given a call has been transferred to Dwight or Janet
+  When the recipient does not answer within 30 seconds
+  Then the call should be forwarded to the recipient's voicemail
+  And the voicemail routing should be logged with timestamp
+
+--- Scenario 7 ---
+Scenario: Handle invalid keypad input
+  Given the caller has heard the menu options
+  When the caller presses a key other than 1 or 2
+  Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight or 2 for Janet."
+  And the caller should be allowed up to 3 retry attempts
+
+--- Scenario 8 ---
+Scenario: Handle no input timeout
+  Given the caller has heard the menu options
+  When no input is received within 5 seconds
+  Then the system should repeat the menu prompt
+  And the caller should be allowed up to 3 attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected politely
+
+--- Scenario 9 ---
+Scenario: Use OpenAI text-to-speech for prompts
+  Given OpenAI text-to-speech API is configured
+  When the system generates greeting or menu prompts
+  Then the speech should be dynamically generated using OpenAI TTS
+  And speech latency should not exceed 2 seconds
+  And the voice should sound clear and natural
+
+--- Scenario 10 ---
+Scenario: Log call activity for observability
+  Given any call interaction occurs
+  When a call is answered, routed, or terminated
+  Then the system should log the timestamp
+  And the system should log caller ID if available
+  And the system should log selected menu option
+  And the system should log transfer destination
+  And the system should log call duration
+
+--- Scenario 11 ---
+Scenario: Support concurrent calls up to maximum capacity
+  Given multiple callers dial simultaneously
+  When up to 5 concurrent calls are active
+  Then the system should answer and process each call independently
+  And routing latency should not exceed 5 seconds per call
+
+--- Scenario 12 ---
+Scenario: Handle excess concurrent calls
+  Given 5 concurrent calls are already being processed
+  When an additional caller attempts to connect
+  Then the system should play a busy signal
+  And the call should be disconnected
+  And the overflow event should be logged
+
+--- Scenario 13 ---
+Scenario: Ensure secure communications
+  Given a call is processed by the system
+  When signaling and media are transmitted
+  Then all communications should be encrypted using TLS
+  And access to logs and configuration should require authenticated access
+
+--- Scenario 14 ---
+Scenario: Operate continuously without business hour restrictions
+  Given the system is deployed and running
+  When a call arrives at any time of day or night
+  Then the system should answer and process the call
+  And no business hours restrictions should apply
+
+[OK] Saved Gherkin scenarios to requirements.gherkin
+[AUTO-APPROVE] Proceed to acceptance criteria?
+
+[ACCEPTANCE CRITERIA] Creating acceptance criteria...
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Criteria:
+
+1. Incoming calls are answered automatically within 3 seconds of receipt
+   Type: e2e
+   Rationale: Ensures callers experience minimal wait time and professional service quality
+
+2. Greeting message plays immediately after call is answered
+   Type: e2e
+   Rationale: Confirms audio playback functionality and caller acknowledgment
+
+3. Menu options are announced clearly with correct content: 'Press 1 for Dwight. Press 2 for Janet.'
+   Type: e2e
+   Rationale: Verifies proper prompt content and audio clarity for caller guidance
+
+4. System correctly detects and processes DTMF input for keys 1 and 2
+   Type: integration
+   Rationale: Core functionality for keypad-based call routing
+
+5. Pressing 1 transfers call to Dwight's Teams phone number with transfer notification
+   Type: e2e
+   Rationale: Validates primary routing path and user feedback
+
+6. Pressing 2 transfers call to Janet's Teams phone number with transfer notification
+   Type: e2e
+   Rationale: Validates secondary routing path and user feedback
+
+7. Invalid DTMF input (keys other than 1 or 2) triggers error message and retry prompt
+   Type: integration
+   Rationale: Ensures graceful error handling and guides callers to valid options
+
+8. System allows up to 3 retry attempts for invalid input before disconnecting
+   Type: integration
+   Rationale: Balances user assistance with system resource protection
+
+9. No DTMF input within 5 seconds triggers menu repeat
+   Type: integration
+   Rationale: Assists callers who may have missed the initial prompt
+
+10. After 3 timeout attempts with no input, call is disconnected with polite message
+   Type: e2e
+   Rationale: Prevents indefinite resource consumption while maintaining professional experience
+
+11. Unanswered transfers are forwarded to recipient's voicemail after 30 seconds
+   Type: e2e
+   Rationale: Ensures callers can leave messages when recipients are unavailable
+
+12. OpenAI TTS generates speech dynamically for all prompts and messages
+   Type: integration
+   Rationale: Validates integration with OpenAI API for natural voice generation
+
+13. TTS speech generation completes with latency under 2 seconds
+   Type: integration
+   Rationale: Ensures responsive user experience without awkward pauses
+
+14. Generated speech is clear, natural-sounding, and intelligible
+   Type: manual
+   Rationale: Verifies audio quality meets professional standards
+
+15. Call answered event is logged with timestamp and caller ID
+   Type: integration
+   Rationale: Enables call tracking and troubleshooting for observability
+
+16. Menu selection (1 or 2) is logged with timestamp
+   Type: integration
+   Rationale: Tracks user behavior and routing decisions for analytics
+
+17. Call transfer events are logged with destination and timestamp
+   Type: integration
+   Rationale: Provides audit trail for call routing actions
+
+18. Call duration is logged when call ends
+   Type: integration
+   Rationale: Enables call analytics and billing verification
+
+19. Voicemail forwarding events are logged with timestamp
+   Type: integration
+   Rationale: Tracks unanswered transfer scenarios for monitoring
+
+20. System processes up to 5 concurrent calls independently without interference
+   Type: e2e
+   Rationale: Validates concurrent call handling capacity and isolation
+
+21. Routing latency remains under 5 seconds per call during concurrent load
+   Type: integration
+   Rationale: Ensures performance doesn't degrade under multi-call scenarios
+
+22. 6th concurrent call receives busy signal and is disconnected
+   Type: e2e
+   Rationale: Validates capacity limit enforcement and graceful overflow handling
+
+23. Overflow call events are logged with timestamp
+   Type: integration
+   Rationale: Identifies capacity issues for potential scaling decisions
+
+24. All call signaling and media use TLS encryption
+   Type: integration
+   Rationale: Ensures security and privacy of communications
+
+25. Access to logs and system configuration requires authenticated access
+   Type: manual
+   Rationale: Protects sensitive data and prevents unauthorized changes
+
+26. System operates 24/7 and answers calls at any time without business hour restrictions
+   Type: e2e
+   Rationale: Validates continuous availability requirement
+
+27. Retry counter resets correctly between different callers
+   Type: integration
+   Rationale: Prevents session state leakage that could affect subsequent calls
+
+28. Error scenarios (API failures, network issues) are logged appropriately
+   Type: integration
+   Rationale: Ensures system failures are observable for rapid incident response
+
+
+Definition of Done:
+  [x] All acceptance criteria are met and verified through testing
+  [x] Unit tests achieve >80% code coverage for DTMF parsing, retry logic, and timeout handling
+  [x] Integration tests pass for OpenAI TTS, ACS call handling, and Azure Monitor logging
+  [x] End-to-end tests validate complete call flows for options 1, 2, invalid input, timeouts, and voicemail
+  [x] Load testing confirms system handles 5 concurrent calls with <5s routing latency
+  [x] Security testing validates TLS encryption and authenticated access controls
+  [x] All call events successfully logged to Azure Monitor or Application Insights
+  [x] Error handling tested for OpenAI API failures, ACS failures, and network issues
+  [x] Code reviewed and approved by at least one team member
+  [x] Deployment documentation updated with Azure resource requirements and configuration
+  [x] Monitoring dashboards and alerting rules configured in Azure Monitor
+  [x] 24/7 operation verified through extended runtime testing
+
+
+Risk Areas:
+  [!] OpenAI TTS API latency or availability could delay prompts beyond 2-second SLA
+  [!] Azure Communication Services call transfer reliability and network conditions
+  [!] DTMF input detection accuracy varies across different telephone carriers
+  [!] Race conditions in concurrent call handling when approaching 5-call limit
+  [!] Session state management for retry attempts could leak between calls
+  [!] Voicemail forwarding integration with Microsoft Teams may have undocumented limitations
+  [!] Network latency between ACS and system could affect 3-second answer requirement
+  [!] TLS certificate management requires renewal strategy to prevent service interruption
+  [!] High call volume could generate excessive logging costs in Azure Monitor
+  [!] Authentication token expiration during long-running 24/7 operation
+  [!] OpenAI API rate limiting or quota exhaustion under high concurrent call load
+  [!] Teams phone number availability and configuration errors could break routing
+  [!] Timeout and retry logic complexity increases risk of edge case bugs
+[AUTO-APPROVE] Proceed to technical design?
+
+[ARCHITECT PLANNER] Designing technical architecture...
+Warning: Could not read agent_caller.py: 'charmap' codec can't decode byte 0x8f in position 5847: character maps to <undefined>
+Analyzed 8 files in codebase
+
+============================================================
+TECHNICAL DESIGN
+============================================================
+
+Implement an AI-powered Teams auto-attendant using Azure Communication Services (ACS) Call Automation SDK with Python. The system will use an event-driven webhook architecture where ACS sends call events to a Flask web server. A state machine pattern will manage call flow through states: answered, greeting, menu prompt, waiting for input, transferring, and disconnected. OpenAI TTS will generate voice prompts dynamically with optional caching. DTMF input detection will use ACS recognize actions. Call transfers will use ACS transfer actions to route to Teams phone numbers. Concurrency will be managed with an in-memory counter (upgradable to Redis). All events will be logged to Azure Monitor with structured JSON format. The system will validate webhook signatures for security and use environment variables for configuration.
+
+
+Design Decisions:
+
+ò Call Flow Management
+  Decision: Use explicit state machine pattern with states: IDLE, GREETING, MENU_PROMPT, WAITING_FOR_INPUT, TRANSFERRING, VOICEMAIL, DISCONNECTED
+  Rationale: State machine makes call flow logic explicit, testable, and maintainable. Easy to add new states or transitions. Prevents invalid state transitions. Each state has clear entry/exit conditions and timeout handling.
+
+ò Webhook Architecture
+  Decision: Use Flask web server to receive ACS Event Grid webhooks with signature validation
+  Rationale: ACS Call Automation uses Event Grid webhooks for real-time call events. Flask is lightweight, well-supported in Python ecosystem, and easy to deploy. Signature validation ensures security.
+
+ò TTS Integration Strategy
+  Decision: Generate prompts dynamically using OpenAI TTS API with in-memory caching of common phrases
+  Rationale: Dynamic generation provides flexibility for personalization and updates without re-deployment. Caching common prompts (greeting, menu, error messages) reduces latency and API costs. Meets 2-second latency requirement.
+
+ò Concurrency Management
+  Decision: In-memory counter for active calls with configurable limit (default 5), with Redis upgrade path for production scale
+  Rationale: In-memory counter is simple and sufficient for single-instance deployment. Meets acceptance criteria for 5 concurrent calls. Redis provides distributed locking for multi-instance scaling if needed later.
+
+ò Error Handling Strategy
+  Decision: Retry with exponential backoff for transient failures, circuit breaker for external APIs, graceful degradation with fallback messages
+  Rationale: Handles transient network/API failures gracefully. Circuit breaker prevents cascade failures. Fallback messages ensure callers never hear silence. All errors logged for observability.
+
+ò Logging and Observability
+  Decision: Structured JSON logging to Azure Monitor Application Insights with correlation IDs for call tracing
+  Rationale: Acceptance criteria require logging of timestamps, caller ID, menu selections, transfers, and duration. JSON format enables querying and alerting. Correlation IDs enable end-to-end call tracing. Azure Monitor integrates with ACS.
+
+ò Configuration Management
+  Decision: Environment variables with python-dotenv for local development, Azure Key Vault references for production secrets
+  Rationale: 12-factor app pattern. Secrets never in code. Easy local development with .env files. Production uses Key Vault for security. All config validated at startup.
+
+ò DTMF Input Detection
+  Decision: Use ACS recognize action with DTMF options, 5-second inter-digit timeout, 3 retry attempts
+  Rationale: ACS recognize action is native feature for DTMF detection. Configurable timeout meets requirements. Retry logic provides user-friendly experience. Easy to extend for more menu options.
+
+ò Call Transfer Implementation
+  Decision: Use ACS transfer action to PSTN numbers, 30-second timeout before voicemail forwarding
+  Rationale: ACS transfer action natively supports PSTN transfers to Teams numbers. Built-in timeout and voicemail forwarding. Meets acceptance criteria for unanswered transfer handling.
+
+ò Deployment Model
+  Decision: Deploy as Azure App Service with always-on enabled, or Azure Container Instance for 24/7 operation
+  Rationale: Acceptance criteria require 24/7 operation. Azure App Service provides managed hosting with auto-scaling. Always-on prevents cold starts. Container option provides portability.
+
+
+Files to Create:
+  + src/teams_attendant/__init__.py
+  + src/teams_attendant/config.py
+  + src/teams_attendant/webhook_server.py
+  + src/teams_attendant/call_handler.py
+  + src/teams_attendant/state_machine.py
+  + src/teams_attendant/acs_client.py
+  + src/teams_attendant/tts_service.py
+  + src/teams_attendant/concurrency_manager.py
+  + src/teams_attendant/logging_service.py
+  + src/teams_attendant/models.py
+  + tests/teams_attendant/__init__.py
+  + tests/teams_attendant/test_call_handler.py
+  + tests/teams_attendant/test_state_machine.py
+  + tests/teams_attendant/test_tts_service.py
+  + tests/teams_attendant/test_acs_client.py
+  + tests/teams_attendant/test_concurrency_manager.py
+  + tests/teams_attendant/integration/test_call_flow_e2e.py
+  + .env.example
+  + README_TEAMS_ATTENDANT.md
+  + deployment/azure_deploy.sh
+  + deployment/app_service_config.json
+
+
+Files to Modify:
+  ~ requirements.txt
+
+
+Dependencies Needed:
+  - azure-communication-callautomation>=1.2.0
+  - openai>=1.12.0
+  - flask>=3.0.0
+  - python-dotenv>=1.0.0
+  - azure-monitor-opentelemetry>=1.2.0
+  - azure-identity>=1.15.0
+  - pydantic>=2.6.0
+  - redis>=5.0.0
+  - requests>=2.31.0
+
+
+Design Diagrams:
+Call Flow State Machine:
+
+    [Incoming Call]
+           |
+           v
+    [IDLE] ----answered----> [GREETING]
+                                  |
+                                  v
+                            [MENU_PROMPT]
+                                  |
+                                  v
+                         [WAITING_FOR_INPUT]
+                           |     |      |
+                    (DTMF 1) (DTMF 2) (timeout/invalid)
+                           |     |      |
+                           v     v      |
+                    [TRANSFERRING] <----+ (retry up to 3x)
+                           |
+                      (30s timeout)
+                           |
+                           v
+                    [VOICEMAIL or SUCCESS]
+                           |
+                           v
+                    [DISCONNECTED]
+
+
+Component Architecture:
+
++------------------+
+|  Webhook Server  |  (Flask)
+|   (Port 8080)    |
++------------------+
+         |
+         | HTTP POST (ACS Events)
+         | - IncomingCall
+         | - CallConnected
+         | - RecognizeCompleted
+         | - CallTransferAccepted
+         | - CallDisconnected
+         v
++------------------+
+|   Call Handler   |  (Main orchestration)
++------------------+
+    |    |    |
+    |    |    +---------> [TTS Service] ----> OpenAI TTS API
+    |    |                    |                (tts-1 model)
+    |    |                    v
+    |    |              [Audio Cache]
+    |    |
+    |    +--------------> [State Machine] (Track call state)
+    |                          |
+    |                          v
+    |                    [State: GREETING]
+    |                    [State: MENU_PROMPT]
+    |                    [State: WAITING_FOR_INPUT]
+    |                    [State: TRANSFERRING]
+    |
+    +-------------------> [ACS Client] ----> Azure Communication Services
+    |                          |              - Answer call
+    |                          |              - Play audio
+    |                          |              - Recognize DTMF
+    |                          |              - Transfer call
+    |                          v
+    |                    [Call Automation API]
+    |
+    +-------------------> [Concurrency Manager] (Track active calls)
+    |                          |
+    |                          v
+    |                    [Active Calls Counter: 0-5]
+    |
+    +-------------------> [Logging Service] ----> Azure Monitor
+                                                  Application Insights
+
+
+DTMF Input Handling Flow:
+
+[Caller presses 1]
+     |
+     v
+[ACS detects DTMF] ----webhook----> [Webhook Server]
+     |                                    |
+     v                                    v
+[Event: RecognizeCompleted]        [Call Handler]
+     |                                    |
+     v                                    v
+[choice="1"]                        [State: WAITING_FOR_INPUT -> TRANSFERRING]
+     |                                    |
+     v                                    v
+[Validate choice]                   [Log: Menu selection = 1]
+     |                                    |
+     v                                    v
+[Transfer API call] <------------- [ACS Client]
+     |                                    |
+     v                                    v
+[Dwight's Teams phone rings]       [Play: "Transferring to Dwight"]
+
+
+Concurrency Management:
+
+[Call 1 arrives] --> [Counter: 0 -> 1] --> [Accept & Process]
+[Call 2 arrives] --> [Counter: 1 -> 2] --> [Accept & Process]
+[Call 3 arrives] --> [Counter: 2 -> 3] --> [Accept & Process]
+[Call 4 arrives] --> [Counter: 3 -> 4] --> [Accept & Process]
+[Call 5 arrives] --> [Counter: 4 -> 5] --> [Accept & Process]
+[Call 6 arrives] --> [Counter: 5 (MAX)] --> [Reject: Busy Signal] --> [Log: Overflow]
+
+[Call 2 ends]    --> [Counter: 5 -> 4] --> [Accept next call]
+
+
+Error Handling Flow:
+
+[API Call Failure]
+     |
+     v
+[Is Transient Error?] ----yes----> [Retry with backoff]
+     |                                   |
+     no                                  v
+     |                            [Attempt 1, 2, 3]
+     v                                   |
+[Log Error]                              v
+     |                            [Success or Max Retries]
+     v                                   |
+[Play Fallback Message]                  v
+     |                            [Log: Retry result]
+     v
+[Graceful Disconnect]
+
+
+Logging Data Model:
+
+Call Event Log Entry:
+{
+  "timestamp": "2026-02-23T10:30:45Z",
+  "correlation_id": "call-abc-123",
+  "event_type": "call_answered | menu_selection | transfer | disconnect",
+  "caller_id": "+15551234567",
+  "menu_choice": "1 | 2 | invalid | timeout",
+  "transfer_destination": "+15559876543",
+  "call_duration_seconds": 45,
+  "outcome": "success | voicemail | error | overflow"
+}
+[AUTO-APPROVE] Proceed to implementation planning?
+
+[TECHNICAL PLANNER] Creating implementation plan...
+
+============================================================
+IMPLEMENTATION PLAN
+============================================================
+
+Implement Teams auto-attendant in 14 steps: (1) Create data models for call state and events, (2) Configuration management with validation, (3) Logging service with Azure Monitor, (4) TTS service with OpenAI and caching, (5) ACS client wrapper for call automation, (6) Concurrency manager with in-memory counter, (7) State machine with transitions and timeouts, (8) Call handler orchestration, (9) Flask webhook server with signature validation, (10) Update requirements.txt, (11) Deployment scripts and Azure config, (12) Documentation and environment template, (13) Unit tests for all components, (14) Integration tests for E2E call flows.
+
+
+Implementation Steps:
+
+1. Create data models including CallState enum (IDLE, GREETING, MENU_PROMPT, WAITING_FOR_INPUT, TRANSFERRING, VOICEMAIL, DISCONNECTED), CallSession dataclass, and Event models
+   Files: src/teams_attendant/__init__.py, src/teams_attendant/models.py
+   Complexity: low
+
+2. Implement configuration management with environment variable loading, validation, and structured Config class for all settings (ACS, OpenAI, Flask, Azure Monitor)
+   Files: src/teams_attendant/config.py
+   Complexity: low
+
+3. Implement logging service with Azure Monitor Application Insights integration, structured JSON logging, and correlation ID tracking
+   Files: src/teams_attendant/logging_service.py
+   Complexity: medium (depends on: 2)
+
+4. Implement TTS service with OpenAI TTS API integration, in-memory caching for common phrases, and audio format conversion for ACS compatibility
+   Files: src/teams_attendant/tts_service.py
+   Complexity: medium (depends on: 2, 3)
+
+5. Implement ACS client wrapper for Call Automation SDK including answer call, play audio, recognize DTMF, transfer call, and hangup actions with retry logic
+   Files: src/teams_attendant/acs_client.py
+   Complexity: high (depends on: 2, 3)
+
+6. Implement concurrency manager with thread-safe in-memory counter, configurable limit (default 5), and acquire/release methods
+   Files: src/teams_attendant/concurrency_manager.py
+   Complexity: low (depends on: 2, 3)
+
+7. Implement state machine with state definitions, transition logic, timeout handling, and state-specific behavior for each CallState
+   Files: src/teams_attendant/state_machine.py
+   Complexity: high (depends on: 1, 3)
+
+8. Implement call handler to orchestrate state machine, ACS client, TTS service, and concurrency manager for processing call events and executing state transitions
+   Files: src/teams_attendant/call_handler.py
+   Complexity: high (depends on: 4, 5, 6, 7)
+
+9. Implement Flask webhook server with Event Grid signature validation, event routing to call handler, and health check endpoint
+   Files: src/teams_attendant/webhook_server.py
+   Complexity: medium (depends on: 2, 3, 8)
+
+10. Update requirements.txt with all dependencies: Flask, azure-communication-callingserver, openai, python-dotenv, azure-monitor-opentelemetry, pytest
+   Files: requirements.txt
+   Complexity: low
+
+11. Create Azure deployment scripts and App Service configuration including always-on settings, environment variables, and scaling rules
+   Files: deployment/azure_deploy.sh, deployment/app_service_config.json
+   Complexity: medium (depends on: 2, 9)
+
+12. Create .env.example template with all required environment variables and README with architecture overview, setup instructions, and deployment guide
+   Files: .env.example, README_TEAMS_ATTENDANT.md
+   Complexity: low (depends on: 2)
+
+13. Create unit tests for state machine, TTS service, ACS client, concurrency manager, and call handler with mocked dependencies and pytest fixtures
+   Files: tests/teams_attendant/__init__.py, tests/teams_attendant/test_state_machine.py, tests/teams_attendant/test_tts_service.py, tests/teams_attendant/test_acs_client.py, tests/teams_attendant/test_concurrency_manager.py, tests/teams_attendant/test_call_handler.py
+   Complexity: high (depends on: 1, 4, 5, 6, 7, 8)
+
+14. Create integration test for end-to-end call flow covering successful transfer, DTMF input, voicemail fallback, concurrency limits, and error scenarios
+   Files: tests/teams_attendant/integration/test_call_flow_e2e.py
+   Complexity: high (depends on: 9, 13)
+
+
+Strategy: Build from foundation to integration using a layered approach: (1) Foundation layer: data models, configuration, and logging provide the base infrastructure. (2) Service layer: implement external integrations (TTS, ACS) and concurrency control as independent, testable services. (3) Business logic layer: build state machine and call handler to orchestrate services and implement call flow logic. (4) API layer: add Flask webhook server to expose functionality. (5) Deployment and testing: configure Azure deployment and add comprehensive tests. This modular strategy enables testing at each layer, clear separation of concerns, and parallel development of independent services.
+Test Strategy: Comprehensive testing at multiple levels: (1) Unit tests for each component using pytest with mocked dependencies - test state machine transitions, TTS caching logic, ACS client retry behavior, concurrency limits, and call handler event processing. (2) Integration tests for end-to-end call flows using Flask test client and mocked ACS/OpenAI APIs - cover successful call with transfer, DTMF input detection with retries, voicemail fallback after timeout, concurrency rejection, and error recovery scenarios. (3) Use pytest fixtures for common setup (mock config, call sessions, events). (4) Test both happy paths and error cases for all components. (5) Validate logging output and correlation ID propagation in integration tests.
+[AUTO-APPROVE] Proceed to implementation?
+
+[CODER] Implementing the feature...
+[CODER] Generated changes for 1 file(s)
+
+[TESTER] Writing test cases...
+[TESTER] Created 4 test file(s)
+
+[REVIEWER] Reviewing implementation...
+
+[REVIEWER] [X] REJECTED
+Feedback: Cannot approve changes due to insufficient review context. The review request is missing critical information: (1) Original files to compare against the modified versions, (2) Test output showing current test status, and (3) Context about what issues these changes are intended to fix. Without this information, it is impossible to verify correctness, assess if changes align with the intended plan, or identify potential bugs. Please provide the original files, test output, and problem context for a proper review.
+  - N/A:0 - No original files provided for comparison - cannot determine what changes were made
+  - N/A:0 - No test output provided - cannot verify if the changes fix test failures or introduce new issues
+  - N/A:0 - No context provided about what problem these changes are supposed to solve
+
+Implementation needs revision. Exiting.

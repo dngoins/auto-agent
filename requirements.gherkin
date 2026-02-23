@@ -1,0 +1,119 @@
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight, Janet, or an operator without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight, Janet, and the operator
+    And the OpenAI SDK is configured for AI voice generation
+    And pre-recorded audio files are available as fallback
+    And logging is configured in Azure Monitor or Application Insights
+
+Scenario: Automatically answer incoming call
+  Given a caller dials the ACS phone number
+  When the call is received by the system
+  Then the call should be automatically answered within 3 seconds
+  And the caller should hear a greeting message
+
+Scenario: Prompt caller with routing options including operator
+  Given the call has been answered
+  When the greeting message finishes playing
+  Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet. Press 0 for operator."
+  And the system should listen for DTMF input
+
+Scenario: Route call to Dwight when option 1 is selected
+  Given the caller has heard the menu options
+  When the caller presses 1
+  Then the system should transfer the call to Dwight's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+Scenario: Route call to Janet when option 2 is selected
+  Given the caller has heard the menu options
+  When the caller presses 2
+  Then the system should transfer the call to Janet's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+Scenario: Route call to operator when option 0 is selected
+  Given the caller has heard the menu options
+  When the caller presses 0
+  Then the system should transfer the call to the operator's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+Scenario: Handle invalid keypad input
+  Given the caller has heard the menu options
+  When the caller presses a key other than 0, 1, or 2
+  Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight, 2 for Janet, or 0 for operator."
+  And the caller should be allowed up to 3 retry attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected politely
+
+Scenario: Handle no input timeout
+  Given the caller has heard the menu options
+  When no input is received within 5 seconds
+  Then the system should repeat the menu prompt
+  And the caller should be allowed up to 3 attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected politely
+
+Scenario: Send to voicemail when transfer target is busy
+  Given the caller has selected a valid routing option
+  When the transfer target (Dwight, Janet, or operator) is busy
+  Then the system should route the call to the target's voicemail
+  And the action should be logged with timestamp and caller ID
+
+Scenario: Send to voicemail when transfer target is unavailable
+  Given the caller has selected a valid routing option
+  When the transfer target (Dwight, Janet, or operator) is unavailable or does not answer
+  Then the system should route the call to the target's voicemail
+  And the action should be logged with timestamp and caller ID
+
+Scenario: Use AI-generated voice for prompts
+  Given OpenAI SDK is available and configured
+  When the system generates greeting or menu prompts
+  Then the speech should be dynamically generated using OpenAI text-to-speech API
+  And speech latency should not exceed 2 seconds
+  And the voice should sound clear and natural
+
+Scenario: Fallback to pre-recorded audio when AI voice generation fails
+  Given the OpenAI SDK is unavailable or fails to generate speech
+  When the system needs to play a prompt
+  Then the system should use pre-recorded audio files as fallback
+  And the call flow should continue without interruption
+  And the failure should be logged for monitoring
+
+Scenario: Log call activity for observability
+  Given any call interaction occurs
+  When a call is answered, routed, or terminated
+  Then the system should log the timestamp
+  And the system should log caller ID if available
+  And the system should log selected menu option
+  And the system should log transfer destination
+  And the system should log call duration
+  And the system should log any errors or fallback events
+
+Scenario: Support up to 5 concurrent calls
+  Given multiple callers dial simultaneously
+  When up to 5 concurrent calls are active
+  Then the system should answer and process each call independently
+  And routing latency should not exceed 5 seconds per call
+  And each call should maintain its own state
+
+Scenario: Reject calls beyond concurrent limit with busy signal
+  Given 5 concurrent calls are already active
+  When a 6th caller dials the ACS phone number
+  Then the system should return a busy signal
+  And the call should be rejected
+  And the rejection should be logged with timestamp
+
+Scenario: Ensure secure communications
+  Given a call is processed by the system
+  When signaling and media are transmitted
+  Then all communications should be encrypted using TLS
+  And access to logs and configuration should require authenticated access
+  And caller data should be protected according to security best practices

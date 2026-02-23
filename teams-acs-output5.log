@@ -1,0 +1,668 @@
+============================================================
+FEATURE DEVELOPMENT PIPELINE
+============================================================
+
+[REQUIREMENTS GATHER] Processing requirements...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight or Janet without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight and Janet
+    And the AI voice SDK is available for voice generation
+    And logging is configured in Azure Monitor or Application Insights
+
+  Scenario: Automatically answer incoming call
+    Given a caller dials the ACS phone number
+    When the call is received by the system
+    Then the call should be automatically answered within 3 seconds
+    And the caller should hear a greeting message
+
+  Scenario: Prompt caller with routing options
+    Given the call has been answered
+    When the greeting message finishes playing
+    Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet."
+    And the system should listen for DTMF input
+
+  Scenario: Route call to Dwight when option 1 is selected
+    Given the caller has heard the menu options
+    When the caller presses 1
+    Then the system should transfer the call to Dwight's Teams phone number
+    And the caller should hear a transfer notification
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Route call to Janet when option 2 is selected
+    Given the caller has heard the menu options
+    When the caller presses 2
+    Then the system should transfer the call to Janet's Teams phone number
+    And the caller should hear a transfer notification
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Handle invalid keypad input
+    Given the caller has heard the menu options
+    When the caller presses a key other than 1 or 2
+    Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight or 2 for Janet."
+    And the caller should be allowed up to 3 retry attempts
+    And after 3 failed attempts the call should be disconnected politely
+
+  Scenario: Handle no input timeout
+    Given the caller has heard the menu options
+    When no input is received within 5 seconds
+    Then the system should repeat the menu prompt
+    And the caller should be allowed up to 3 attempts
+    And if no valid input is received after 3 attempts
+    Then the call should be disconnected politely
+
+  Scenario: Use AI-generated voice for prompts
+    Given AI voice generation is enabled
+    When the system generates greeting or menu prompts
+    Then the speech should be dynamically generated using the configured AI model
+    And speech latency should not exceed 2 seconds
+    And the voice should sound clear and natural
+
+  Scenario: Log call activity for observability
+    Given any call interaction occurs
+    When a call is answered, routed, or terminated
+    Then the system should log the timestamp
+    And the system should log caller ID if available
+    And the system should log selected menu option
+    And the system should log transfer destination
+    And the system should log call duration
+
+  Scenario: Support concurrent calls
+    Given multiple callers dial simultaneously
+    When up to 5 concurrent calls are active
+    Then the system should answer and process each call independently
+    And routing latency should not exceed 5 seconds per call
+
+  Scenario: Ensure secure communications
+    Given a call is processed by the system
+    When signaling and media are transmitted
+    Then all communications should be encrypted using TLS
+    And access to logs and configuration should require authenticated access
+
+[CLARIFICATION ROUND 1/3]
+[CI MODE] Auto-answering 5 clarification questions
+Q: What should happen when the transfer target (Dwight or Janet) is busy, unavailable, or doesn't answer?
+A: Send to voicemail
+Q: Which AI voice SDK should be used for speech generation?
+A: OpenAI SDK (e.g., text-to-speech API)
+Q: What should happen if the AI voice generation fails or is unavailable?
+A: Use pre-recorded audio files as fallback
+Q: Should there be an option to reach a general operator or receptionist (e.g., Press 0)?
+A: Yes, add Press 0 for operator
+Q: What should happen when the 6th concurrent call arrives (beyond the 5 call limit)?
+A: Return busy signal and reject the call
+
+[REQUIREMENTS GATHER] Refining requirements with your answers...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight, Janet, or an operator without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight, Janet, and the operator
+    And the OpenAI SDK is configured for AI voice generation
+    And pre-recorded audio files are available as fallback
+    And logging is configured in Azure Monitor or Application Insights
+
+--- Scenario 2 ---
+Scenario: Automatically answer incoming call
+  Given a caller dials the ACS phone number
+  When the call is received by the system
+  Then the call should be automatically answered within 3 seconds
+  And the caller should hear a greeting message
+
+--- Scenario 3 ---
+Scenario: Prompt caller with routing options including operator
+  Given the call has been answered
+  When the greeting message finishes playing
+  Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet. Press 0 for operator."
+  And the system should listen for DTMF input
+
+--- Scenario 4 ---
+Scenario: Route call to Dwight when option 1 is selected
+  Given the caller has heard the menu options
+  When the caller presses 1
+  Then the system should transfer the call to Dwight's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 5 ---
+Scenario: Route call to Janet when option 2 is selected
+  Given the caller has heard the menu options
+  When the caller presses 2
+  Then the system should transfer the call to Janet's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 6 ---
+Scenario: Route call to operator when option 0 is selected
+  Given the caller has heard the menu options
+  When the caller presses 0
+  Then the system should transfer the call to the operator's Teams phone number
+  And the caller should hear a transfer notification
+  And the routing action should be logged with timestamp and caller ID
+
+--- Scenario 7 ---
+Scenario: Handle invalid keypad input
+  Given the caller has heard the menu options
+  When the caller presses a key other than 0, 1, or 2
+  Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight, 2 for Janet, or 0 for operator."
+  And the caller should be allowed up to 3 retry attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected politely
+
+--- Scenario 8 ---
+Scenario: Handle no input timeout
+  Given the caller has heard the menu options
+  When no input is received within 5 seconds
+  Then the system should repeat the menu prompt
+  And the caller should be allowed up to 3 attempts
+  And if no valid input is received after 3 attempts
+  Then the call should be disconnected politely
+
+--- Scenario 9 ---
+Scenario: Send to voicemail when transfer target is busy
+  Given the caller has selected a valid routing option
+  When the transfer target (Dwight, Janet, or operator) is busy
+  Then the system should route the call to the target's voicemail
+  And the action should be logged with timestamp and caller ID
+
+--- Scenario 10 ---
+Scenario: Send to voicemail when transfer target is unavailable
+  Given the caller has selected a valid routing option
+  When the transfer target (Dwight, Janet, or operator) is unavailable or does not answer
+  Then the system should route the call to the target's voicemail
+  And the action should be logged with timestamp and caller ID
+
+--- Scenario 11 ---
+Scenario: Use AI-generated voice for prompts
+  Given OpenAI SDK is available and configured
+  When the system generates greeting or menu prompts
+  Then the speech should be dynamically generated using OpenAI text-to-speech API
+  And speech latency should not exceed 2 seconds
+  And the voice should sound clear and natural
+
+--- Scenario 12 ---
+Scenario: Fallback to pre-recorded audio when AI voice generation fails
+  Given the OpenAI SDK is unavailable or fails to generate speech
+  When the system needs to play a prompt
+  Then the system should use pre-recorded audio files as fallback
+  And the call flow should continue without interruption
+  And the failure should be logged for monitoring
+
+--- Scenario 13 ---
+Scenario: Log call activity for observability
+  Given any call interaction occurs
+  When a call is answered, routed, or terminated
+  Then the system should log the timestamp
+  And the system should log caller ID if available
+  And the system should log selected menu option
+  And the system should log transfer destination
+  And the system should log call duration
+  And the system should log any errors or fallback events
+
+--- Scenario 14 ---
+Scenario: Support up to 5 concurrent calls
+  Given multiple callers dial simultaneously
+  When up to 5 concurrent calls are active
+  Then the system should answer and process each call independently
+  And routing latency should not exceed 5 seconds per call
+  And each call should maintain its own state
+
+--- Scenario 15 ---
+Scenario: Reject calls beyond concurrent limit with busy signal
+  Given 5 concurrent calls are already active
+  When a 6th caller dials the ACS phone number
+  Then the system should return a busy signal
+  And the call should be rejected
+  And the rejection should be logged with timestamp
+
+--- Scenario 16 ---
+Scenario: Ensure secure communications
+  Given a call is processed by the system
+  When signaling and media are transmitted
+  Then all communications should be encrypted using TLS
+  And access to logs and configuration should require authenticated access
+  And caller data should be protected according to security best practices
+
+[OK] Saved Gherkin scenarios to requirements.gherkin
+[AUTO-APPROVE] Proceed to acceptance criteria?
+
+[ACCEPTANCE CRITERIA] Creating acceptance criteria...
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Criteria:
+
+1. Incoming call to ACS phone number is answered within 3 seconds and greeting message plays
+   Type: e2e
+   Rationale: Ensures callers experience immediate response without excessive wait time
+
+2. After greeting, system plays menu prompt 'Press 1 for Dwight, Press 2 for Janet, Press 0 for operator' and listens for DTMF input
+   Type: e2e
+   Rationale: Provides clear routing options to caller and prepares system to receive input
+
+3. Pressing 1 transfers call to Dwight's Teams number, plays transfer notification, and logs action with timestamp and caller ID
+   Type: e2e
+   Rationale: Validates complete routing workflow for Dwight option
+
+4. Pressing 2 transfers call to Janet's Teams number, plays transfer notification, and logs action with timestamp and caller ID
+   Type: e2e
+   Rationale: Validates complete routing workflow for Janet option
+
+5. Pressing 0 transfers call to operator's Teams number, plays transfer notification, and logs action with timestamp and caller ID
+   Type: e2e
+   Rationale: Validates complete routing workflow for operator option
+
+6. Pressing invalid key (not 0, 1, or 2) triggers error message and re-prompts caller up to 3 times before disconnecting politely
+   Type: integration
+   Rationale: Handles user errors gracefully with retry logic to prevent accidental disconnections
+
+7. No DTMF input within 5 seconds triggers menu repeat, allowing up to 3 attempts before polite disconnection
+   Type: integration
+   Rationale: Accommodates callers who need time to decide while preventing indefinite wait
+
+8. When transfer target is busy, call routes to target's voicemail and logs action with timestamp and caller ID
+   Type: integration
+   Rationale: Ensures calls are not lost when recipients are unavailable
+
+9. When transfer target is unavailable or does not answer, call routes to target's voicemail and logs action
+   Type: integration
+   Rationale: Provides consistent fallback behavior for unreachable recipients
+
+10. OpenAI text-to-speech API generates greeting and menu prompts with latency under 2 seconds and clear, natural voice quality
+   Type: integration
+   Rationale: Provides dynamic, high-quality voice experience without noticeable delays
+
+11. When OpenAI SDK is unavailable or fails, system uses pre-recorded audio files seamlessly without interrupting call flow and logs failure
+   Type: integration
+   Rationale: Ensures system reliability even when AI service is down
+
+12. All call events (answer, route, transfer, disconnect, errors) are logged with timestamp, caller ID, menu option, destination, duration, and error details
+   Type: integration
+   Rationale: Provides comprehensive observability for troubleshooting and analytics
+
+13. System handles up to 5 concurrent calls independently with routing latency under 5 seconds per call and isolated state management
+   Type: integration
+   Rationale: Supports multiple simultaneous callers without performance degradation
+
+14. 6th concurrent call receives busy signal, is rejected, and rejection is logged with timestamp
+   Type: integration
+   Rationale: Prevents system overload by enforcing concurrent call limit
+
+15. All signaling and media transmissions use TLS encryption
+   Type: manual
+   Rationale: Protects caller privacy and prevents eavesdropping
+
+16. Access to logs and configuration requires authenticated access with role-based permissions
+   Type: manual
+   Rationale: Prevents unauthorized access to sensitive system data
+
+17. Caller data (phone numbers, call metadata) is stored and transmitted according to security best practices
+   Type: manual
+   Rationale: Ensures compliance with data protection regulations
+
+18. DTMF input detection correctly identifies digits 0, 1, 2 and rejects other inputs
+   Type: unit
+   Rationale: Validates core input recognition mechanism
+
+19. Retry counter increments correctly and disconnects after 3 failed attempts
+   Type: unit
+   Rationale: Ensures retry logic terminates appropriately
+
+20. Timeout timer triggers re-prompt after exactly 5 seconds of no input
+   Type: unit
+   Rationale: Validates timeout mechanism precision
+
+21. Call state transitions correctly through answered, prompted, routing, transferred, and disconnected states
+   Type: unit
+   Rationale: Ensures proper state machine behavior for call lifecycle
+
+22. System recovers gracefully from ACS service interruptions without crashing
+   Type: integration
+   Rationale: Ensures resilience to external service failures
+
+23. System handles malformed DTMF signals without crashing
+   Type: integration
+   Rationale: Prevents edge case input from causing system failure
+
+24. Transfer notification plays before call is actually transferred to prevent silence
+   Type: e2e
+   Rationale: Improves caller experience by providing feedback during transfer
+
+
+Definition of Done:
+  [x] All acceptance criteria are met and verified through testing
+  [x] Unit tests achieve minimum 80% code coverage for business logic
+  [x] Integration tests pass for all routing scenarios and error conditions
+  [x] E2E tests validate complete call workflows from answer to transfer
+  [x] Load testing confirms 5 concurrent calls are handled without degradation
+  [x] Security review completed and encryption verified
+  [x] OpenAI SDK integration tested with both success and failure scenarios
+  [x] Pre-recorded audio fallback mechanism tested and verified
+  [x] Logging outputs to Azure Monitor or Application Insights successfully
+  [x] All retry and timeout logic tested with edge cases
+  [x] Documentation updated including architecture, deployment, and troubleshooting guides
+  [x] Code reviewed and approved by at least one team member
+  [x] ACS phone number configured and tested in production environment
+  [x] Teams phone numbers for Dwight, Janet, and operator verified and working
+  [x] Monitoring and alerting configured for system health and errors
+
+
+Risk Areas:
+  [!] OpenAI SDK availability and latency - third-party dependency could cause delays or failures
+  [!] ACS to Teams call transfer reliability - integration point may have connectivity issues
+  [!] DTMF detection accuracy - poor audio quality or network issues could cause misdetection
+  [!] Concurrent call state isolation - race conditions could mix up caller states
+  [!] Network latency affecting 3-second answer time requirement
+  [!] Voicemail routing failures when Teams numbers are misconfigured
+  [!] OpenAI API rate limits or quota exhaustion during high call volume
+  [!] Pre-recorded audio file corruption or missing files causing playback failures
+  [!] Logging service downtime preventing observability
+  [!] Azure subscription quota limits affecting ACS resources
+  [!] TLS certificate expiration or misconfiguration breaking encryption
+  [!] Caller ID spoofing or malformed caller data causing logging failures
+  [!] Time zone issues in timestamp logging across regions
+  [!] Busy signal implementation not properly rejecting 6th call
+  [!] Memory leaks from improper cleanup of call sessions
+  [!] Authentication credential rotation breaking ACS or OpenAI access
+[AUTO-APPROVE] Proceed to technical design?
+
+[ARCHITECT PLANNER] Designing technical architecture...
+Analyzed 9 files in codebase
+
+============================================================
+TECHNICAL DESIGN
+============================================================
+
+Implement an event-driven Azure Communication Services (ACS) auto-attendant using a webhook-based architecture. Create a Flask/FastAPI webhook server to receive ACS call events, manage call state using a state machine pattern, and route calls to Teams numbers based on DTMF input. Use OpenAI text-to-speech API for dynamic voice generation with pre-recorded audio fallback. Implement concurrent call handling (max 5) using asyncio with per-call state isolation. Log all call activity to Azure Monitor for observability. Structure code into separate services: CallHandler (orchestration), VoiceService (speech generation), RoutingService (Teams integration), DTMFHandler (input processing), and CallState (state management).
+
+
+Design Decisions:
+
+ΓÇó Architecture Pattern
+  Decision: Event-driven webhook architecture with state machine for call flow
+  Rationale: ACS uses webhooks for call events (IncomingCall, CallConnected, etc.). State machine pattern cleanly models call lifecycle transitions (answered -> prompted -> routing -> transferred/disconnected) and makes retry logic explicit.
+
+ΓÇó Voice Generation Strategy
+  Decision: Primary OpenAI text-to-speech with pre-recorded audio fallback using Strategy pattern
+  Rationale: OpenAI provides natural-sounding voices with low latency (<2s). Strategy pattern allows seamless fallback to pre-recorded files when OpenAI fails. Pre-recorded files ensure reliability even during API outages.
+
+ΓÇó Webhook Server Framework
+  Decision: Use FastAPI for webhook endpoint server
+  Rationale: FastAPI provides async/await support (needed for concurrent calls), automatic request validation via Pydantic, and easy webhook signature verification. Built-in OpenAPI docs help with debugging.
+
+ΓÇó Call State Management
+  Decision: In-memory state dictionary with per-call locks for thread safety
+  Rationale: For 5 concurrent calls, in-memory state is sufficient and fast. Per-call locks prevent race conditions during state transitions. State includes retry counters, timeout tracking, and DTMF history.
+
+ΓÇó DTMF Input Handling
+  Decision: Validate DTMF input immediately and track retry count in call state
+  Rationale: ACS sends DTMF events via webhook. Immediate validation (0, 1, 2 only) prevents invalid routing. Retry counter (max 3) in state ensures consistent enforcement. Timeout timer resets on each valid input.
+
+ΓÇó Call Routing Mechanism
+  Decision: Use ACS TransferCallToParticipant API to transfer to Teams numbers
+  Rationale: ACS SDK provides native transfer to Teams via phone numbers. Supports busy/unavailable detection and automatic voicemail routing. Transfer notification plays before handoff to prevent silence.
+
+ΓÇó Logging and Observability
+  Decision: Structured logging to Azure Monitor using OpenTelemetry with call ID correlation
+  Rationale: Azure Monitor integrates with ACS for unified observability. Structured logs (JSON) enable querying by caller ID, timestamp, routing decision. Call ID correlation links all events for a single call.
+
+ΓÇó Concurrency Model
+  Decision: Asyncio with per-call async task and semaphore for call limit
+  Rationale: FastAPI uses asyncio natively. Each incoming call spawns an async task. Semaphore (limit=5) enforces concurrent call cap. Per-call state isolation prevents cross-contamination.
+
+ΓÇó Configuration Management
+  Decision: Environment variables for secrets, Pydantic BaseSettings for validation
+  Rationale: Secrets (ACS connection string, OpenAI API key, Teams numbers) must not be in code. Pydantic validates config on startup, failing fast if misconfigured. Supports .env files for local dev.
+
+ΓÇó Audio File Format
+  Decision: WAV format, 8kHz sample rate, 16-bit mono for pre-recorded audio
+  Rationale: ACS telephony uses 8kHz narrowband audio. WAV is uncompressed and widely supported. Mono reduces file size. 16-bit provides adequate quality for voice.
+
+
+Files to Create:
+  + src/teams_acs/__init__.py
+  + src/teams_acs/webhook_server.py
+  + src/teams_acs/call_handler.py
+  + src/teams_acs/call_state.py
+  + src/teams_acs/voice_service.py
+  + src/teams_acs/routing_service.py
+  + src/teams_acs/dtmf_handler.py
+  + src/teams_acs/config.py
+  + src/teams_acs/logger.py
+  + audio/greeting.wav
+  + audio/menu.wav
+  + audio/transfer.wav
+  + audio/invalid_input.wav
+  + audio/timeout.wav
+  + tests/unit/test_dtmf_handler.py
+  + tests/unit/test_call_state.py
+  + tests/unit/test_voice_service.py
+  + tests/integration/test_voice_fallback.py
+  + tests/integration/test_call_routing.py
+  + tests/integration/test_logging.py
+  + tests/integration/test_concurrent_calls.py
+  + tests/e2e/test_complete_call_flow.py
+  + .env.example
+  + docs/deployment.md
+  + docs/architecture.md
+
+
+Files to Modify:
+  ~ requirements.txt
+
+
+Dependencies Needed:
+  - azure-communication-calling>=1.2.0
+  - azure-communication-identity>=1.4.0
+  - openai>=1.0.0
+  - fastapi>=0.104.0
+  - uvicorn[standard]>=0.24.0
+  - pydantic>=2.0.0
+  - pydantic-settings>=2.0.0
+  - python-dotenv>=1.0.0
+  - azure-monitor-opentelemetry>=1.0.0
+  - opentelemetry-api>=1.20.0
+  - opentelemetry-sdk>=1.20.0
+  - httpx>=0.25.0
+  - pytest>=7.4.0
+  - pytest-asyncio>=0.21.0
+  - pytest-mock>=3.12.0
+
+
+Design Diagrams:
+# System Architecture
+
+```
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé   Caller    Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+       Γöé (1) Dials ACS number
+       Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé  Azure Communication    Γöé
+Γöé  Services (ACS)         Γöé
+Γöé  - Receives call        Γöé
+Γöé  - Sends webhook events Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+            Γöé (2) IncomingCall webhook
+            Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé  FastAPI Webhook Server           Γöé
+Γöé  - /webhook/acs/events            Γöé
+Γöé  - Validates webhook signature    Γöé
+Γöé  - Routes to CallHandler          Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+              Γöé
+              Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé  CallHandler (Orchestrator)         Γöé
+Γöé  - Manages call lifecycle           Γöé
+Γöé  - Coordinates services             Γöé
+Γöé  - Enforces concurrency limit (5)   Γöé
+ΓööΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÿ
+   Γöé                              Γöé
+   Γû╝                              Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ            ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé CallState   Γöé            Γöé VoiceServiceΓöé
+Γöé - State     Γöé            Γöé - OpenAI    Γöé
+Γöé - Retries   Γöé            Γöé - Fallback  Γöé
+Γöé - Timeout   Γöé            Γöé - Audio     Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ            ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+   Γöé                              Γöé
+   Γû╝                              Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ            ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+ΓöéDTMFHandler  Γöé            ΓöéRoutingServiceΓöé
+Γöé- Validate   Γöé            Γöé - Transfer  Γöé
+Γöé- Retry logicΓöé            Γöé - Voicemail Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ            ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+                                  Γöé
+                                  Γû╝
+                          ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+                          Γöé  Teams Numbers  Γöé
+                          Γöé  - Dwight       Γöé
+                          Γöé  - Janet        Γöé
+                          Γöé  - Operator     Γöé
+                          ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+
+All events logged to Azure Monitor
+```
+
+# Call State Machine
+
+```
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé  IDLE    Γöé (Initial state)
+ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé IncomingCall event
+     Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé ANSWERED Γöé Answer call, play greeting
+ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé Greeting complete
+     Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé PROMPTED Γöé Play menu, listen for DTMF
+ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé
+     Γö£ΓöÇ Valid DTMF (0,1,2) ΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+     Γöé                         Γöé ROUTING  Γöé Play transfer msg
+     Γöé                         ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé                              Γöé
+     Γöé                              Γû╝
+     Γöé                         ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+     Γöé                         ΓöéTRANSFERRED Γöé Call ACS transfer API
+     Γöé                         ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé                              Γöé
+     Γöé                              Γû╝
+     Γöé                         ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+     Γöé                         Γöé COMPLETED  Γöé
+     Γöé                         ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé
+     Γö£ΓöÇ Invalid DTMF ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+     Γöé                         Γöé  ERROR   Γöé Increment retry
+     Γöé                         ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé                              Γöé
+     Γöé                              Γö£ΓöÇ retry < 3 ΓöÇΓöÇΓû║ Back to PROMPTED
+     Γöé                              Γöé
+     Γöé                              ΓööΓöÇ retry >= 3 ΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+     Γöé                                                Γöé DISCONNECTED Γöé
+     Γöé                                                ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+     Γöé
+     ΓööΓöÇ Timeout (5s) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+                               Γöé TIMEOUT  Γöé Increment attempt
+                               ΓööΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+                                    Γöé
+                                    Γö£ΓöÇ attempt < 3 ΓöÇΓöÇΓû║ Back to PROMPTED
+                                    Γöé
+                                    ΓööΓöÇ attempt >= 3 ΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+                                                        Γöé DISCONNECTED Γöé
+                                                        ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+```
+
+# Voice Generation Fallback Flow
+
+```
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé Need to play audio Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+          Γöé
+          Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé Try OpenAI TTS API   Γöé
+Γöé - text_to_speech()   Γöé
+Γöé - timeout: 2s        Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+       Γöé
+       Γö£ΓöÇ Success (200 OK) ΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+       Γöé                       Γöé Play AI audioΓöé
+       Γöé                       Γöé Log: AI used Γöé
+       Γöé                       ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+       Γöé
+       ΓööΓöÇ Failure ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+         (timeout, 5xx, etc)   Γöé Fallback to pre-     Γöé
+                               Γöé recorded audio file  Γöé
+                               Γöé Log: Fallback used   Γöé
+                               Γöé Log: Error details   Γöé
+                               ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+
+No interruption to call flow in either case
+```
+
+# Concurrent Call Management
+
+```
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé FastAPI Webhook Endpoint            Γöé
+Γöé /webhook/acs/events                 Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+               Γöé New IncomingCall
+               Γû╝
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé Semaphore (limit=5)                  Γöé
+Γöé - acquire() on new call              Γöé
+Γöé - release() on call end              Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+      Γöé
+      Γö£ΓöÇ Semaphore acquired ΓöÇΓöÇΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+      Γöé   (calls < 5)             Γöé Spawn async task       Γöé
+      Γöé                           Γöé - Isolated call state  Γöé
+      Γöé                           Γöé - Independent flow     Γöé
+      Γöé                           Γöé - Logs with call_id    Γöé
+      Γöé                           ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+      Γöé
+      ΓööΓöÇ Semaphore full ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓû║ ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+          (calls >= 5)            Γöé Return busy signal     Γöé
+                                  Γöé Reject call (ACS API)  Γöé
+                                  Γöé Log rejection          Γöé
+                                  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+
+Each call maintains:
+- Unique call_id (from ACS)
+- Independent CallState instance
+- Separate retry/timeout counters
+- Isolated DTMF history

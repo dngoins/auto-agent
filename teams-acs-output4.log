@@ -1,0 +1,385 @@
+============================================================
+FEATURE DEVELOPMENT PIPELINE
+============================================================
+
+[REQUIREMENTS GATHER] Processing requirements...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight or Janet without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight and Janet
+    And the OpenAI SDK or Foundry SDK is available for voice generation
+    And logging is configured in Azure Monitor or Application Insights
+
+  Scenario: Automatically answer incoming call
+    Given a caller dials the ACS phone number
+    When the call is received by the system
+    Then the call should be automatically answered within 3 seconds
+    And the caller should hear a greeting message
+
+  Scenario: Prompt caller with routing options
+    Given the call has been answered
+    When the greeting message finishes playing
+    Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet."
+    And the system should listen for DTMF input
+
+  Scenario: Route call to Dwight when option 1 is selected
+    Given the caller has heard the menu options
+    When the caller presses 1
+    Then the system should transfer the call to Dwight's Teams phone number
+    And the caller should hear a transfer notification
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Route call to Janet when option 2 is selected
+    Given the caller has heard the menu options
+    When the caller presses 2
+    Then the system should transfer the call to Janet's Teams phone number
+    And the caller should hear a transfer notification
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Handle invalid keypad input
+    Given the caller has heard the menu options
+    When the caller presses a key other than 1 or 2
+    Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight or 2 for Janet."
+    And the caller should be allowed up to 3 retry attempts
+
+  Scenario: Handle no input timeout
+    Given the caller has heard the menu options
+    When no input is received within 5 seconds
+    Then the system should repeat the menu prompt
+    And the caller should be allowed up to 3 attempts
+    And if no valid input is received after 3 attempts
+    Then the call should be disconnected politely
+
+  Scenario: Use AI-generated voice for prompts
+    Given AI voice generation is enabled
+    When the system generates greeting or menu prompts
+    Then the speech should be dynamically generated using the configured AI model
+    And speech latency should not exceed 2 seconds
+    And the voice should sound clear and natural
+
+  Scenario: Log call activity for observability
+    Given any call interaction occurs
+    When a call is answered, routed, or terminated
+    Then the system should log the timestamp
+    And the system should log caller ID if available
+    And the system should log selected menu option
+    And the system should log transfer destination
+    And the system should log call duration
+
+  Scenario: Support concurrent calls
+    Given multiple callers dial simultaneously
+    When up to 5 concurrent calls are active
+    Then the system should answer and process each call independently
+    And routing latency should not exceed 5 seconds per call
+
+  Scenario: Ensure secure communications
+    Given a call is processed by the system
+    When signaling and media are transmitted
+    Then all communications should be encrypted using TLS
+    And access to logs and configuration should require authenticated access
+
+[CLARIFICATION ROUND 1/3]
+[CI MODE] Auto-answering 5 clarification questions
+Q: What should happen if the system encounters a technical error when attempting to transfer the call to Dwight or Janet?
+A: Play an error message and return to the main menu
+Q: What should happen if Dwight or Janet don't answer the transferred call?
+A: Return the caller to the main menu
+Q: What should happen if Dwight or Janet are already on another call (busy signal)?
+A: Play a busy message and return to main menu
+Q: Which AI service should be used for voice generation?
+A: OpenAI (with Azure OpenAI Service)
+Q: What language and voice characteristics should be used for the AI-generated prompts?
+A: English (US), neutral/professional voice
+
+[REQUIREMENTS GATHER] Refining requirements with your answers...
+
+============================================================
+GHERKIN SCENARIOS
+============================================================
+
+--- Scenario 1 ---
+Feature: AI-Powered Teams Auto-Attendant Call Routing
+  As an organization using Microsoft Teams telephony
+  I want an automated agent to answer incoming calls and route them via keypad selection
+  So that callers can quickly reach Dwight or Janet without manual intervention
+
+  Background:
+    Given an active Azure subscription exists
+    And an Azure Communication Services resource is provisioned
+    And an ACS phone number is configured and active
+    And Microsoft Teams phone numbers are assigned to Dwight and Janet
+    And Azure OpenAI Service is configured for voice generation
+    And logging is configured in Azure Monitor or Application Insights
+
+  Scenario: Automatically answer incoming call
+    Given a caller dials the ACS phone number
+    When the call is received by the system
+    Then the call should be automatically answered within 3 seconds
+    And the caller should hear a greeting message in English (US) with a neutral professional voice
+
+  Scenario: Prompt caller with routing options
+    Given the call has been answered
+    When the greeting message finishes playing
+    Then the system should say "Thank you for calling. Press 1 for Dwight. Press 2 for Janet."
+    And the system should listen for DTMF input
+
+  Scenario: Route call to Dwight when option 1 is selected
+    Given the caller has heard the menu options
+    When the caller presses 1
+    Then the system should play "Transferring you to Dwight"
+    And the system should transfer the call to Dwight's Teams phone number
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Route call to Janet when option 2 is selected
+    Given the caller has heard the menu options
+    When the caller presses 2
+    Then the system should play "Transferring you to Janet"
+    And the system should transfer the call to Janet's Teams phone number
+    And the routing action should be logged with timestamp and caller ID
+
+  Scenario: Handle invalid keypad input
+    Given the caller has heard the menu options
+    When the caller presses a key other than 1 or 2
+    Then the system should say "Sorry, that is not a valid option. Press 1 for Dwight or 2 for Janet."
+    And the caller should be allowed up to 3 retry attempts
+    And if invalid input is received after 3 attempts
+    Then the call should be disconnected with a polite message
+
+  Scenario: Handle no input timeout
+    Given the caller has heard the menu options
+    When no input is received within 5 seconds
+    Then the system should repeat the menu prompt
+    And the caller should be allowed up to 3 attempts
+    And if no valid input is received after 3 attempts
+    Then the call should be disconnected politely
+
+  Scenario: Handle technical error during call transfer
+    Given the caller has selected option 1 or 2
+    When the system encounters a technical error attempting to transfer the call
+    Then the system should play "We're sorry, we encountered an error. Returning you to the main menu."
+    And the system should return the caller to the main menu
+    And the error should be logged with timestamp and error details
+
+  Scenario: Handle unanswered transferred call
+    Given the call has been transferred to Dwight or Janet
+    When the called party does not answer within 30 seconds
+    Then the system should play "Sorry, no one is available. Returning you to the main menu."
+    And the system should return the caller to the main menu
+    And the unanswered transfer should be logged
+
+  Scenario: Handle busy signal on transferred call
+    Given the call has been transferred to Dwight or Janet
+    When the called party is already on another call
+    Then the system should play "That person is currently on another call. Returning you to the main menu."
+    And the system should return the caller to the main menu
+    And the busy signal should be logged
+
+  Scenario: Use AI-generated voice for prompts via Azure OpenAI
+    Given Azure OpenAI Service is configured
+    When the system generates greeting or menu prompts
+    Then the speech should be dynamically generated using Azure OpenAI text-to-speech
+    And the voice should be English (US) with neutral professional characteristics
+    And speech latency should not exceed 2 seconds
+    And the voice should sound clear and natural
+
+  Scenario: Log call activity for observability
+    Given any call interaction occurs
+    When a call is answered, routed, or terminated
+    Then the system should log the timestamp
+    And the system should log caller ID if available
+    And the system should log selected menu option
+    And the system should log transfer destination
+    And the system should log call duration
+    And the system should log any errors or exceptional conditions
+
+  Scenario: Support concurrent calls
+    Given multiple callers dial simultaneously
+    When up to 5 concurrent calls are active
+    Then the system should answer and process each call independently
+    And routing latency should not exceed 5 seconds per call
+    And each call should have isolated state and logging
+
+  Scenario: Ensure secure communications
+    Given a call is processed by the system
+    When signaling and media are transmitted
+    Then all communications should be encrypted using TLS
+    And access to logs and configuration should require authenticated access
+    And caller data should be handled in compliance with privacy regulations
+
+[OK] Saved Gherkin scenarios to requirements.gherkin
+[AUTO-APPROVE] Proceed to acceptance criteria?
+
+[ACCEPTANCE CRITERIA] Creating acceptance criteria...
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Criteria:
+
+1. System answers incoming calls within 3 seconds and plays greeting message in English (US) neutral professional voice
+   Type: e2e
+   Rationale: Ensures timely response to callers and establishes professional first impression
+
+2. Menu prompt 'Press 1 for Dwight. Press 2 for Janet.' plays immediately after greeting with <2s latency
+   Type: e2e
+   Rationale: Provides clear routing options without frustrating delays
+
+3. DTMF input '1' triggers 'Transferring you to Dwight' message and successfully transfers call to Dwight's Teams number
+   Type: e2e
+   Rationale: Core routing functionality for Dwight option
+
+4. DTMF input '2' triggers 'Transferring you to Janet' message and successfully transfers call to Janet's Teams number
+   Type: e2e
+   Rationale: Core routing functionality for Janet option
+
+5. Invalid DTMF input (3-9, 0, *, #) triggers error message and re-prompts menu up to 3 times before disconnecting
+   Type: integration
+   Rationale: Handles user errors gracefully while preventing infinite retry loops
+
+6. No DTMF input within 5 seconds triggers menu repeat, allows 3 total attempts, then disconnects politely
+   Type: integration
+   Rationale: Prevents abandoned calls from consuming resources while giving users opportunity to respond
+
+7. Call transfer technical errors trigger error message, return to main menu, and log error with timestamp and details
+   Type: integration
+   Rationale: Provides recovery path when transfer fails and enables troubleshooting
+
+8. Unanswered transfers (30s timeout) trigger message, return to main menu, and log the unanswered event
+   Type: integration
+   Rationale: Gives caller alternative when recipient unavailable
+
+9. Busy signal on transfer triggers message, returns to main menu, and logs busy status
+   Type: integration
+   Rationale: Handles recipient unavailability gracefully
+
+10. All voice prompts generated via Azure OpenAI text-to-speech with English (US) neutral professional voice characteristics
+   Type: integration
+   Rationale: Ensures consistent, natural-sounding voice across all interactions
+
+11. Voice generation latency does not exceed 2 seconds from trigger to audio playback start
+   Type: integration
+   Rationale: Maintains natural conversation flow without frustrating pauses
+
+12. System logs all events: call answered, DTMF input, transfer destination, call duration, errors, caller ID (if available), with timestamps
+   Type: integration
+   Rationale: Enables observability, troubleshooting, and compliance requirements
+
+13. System handles 5 concurrent calls independently with isolated state and routing latency ├óΓÇ░┬ñ5s per call
+   Type: e2e
+   Rationale: Supports expected call volume without degradation
+
+14. All call signaling and media transmissions use TLS encryption
+   Type: integration
+   Rationale: Protects caller privacy and meets security compliance
+
+15. Access to logs and configuration requires authentication and authorization
+   Type: manual
+   Rationale: Prevents unauthorized access to sensitive call data
+
+16. Retry counter resets correctly when caller selects valid option after invalid inputs
+   Type: unit
+   Rationale: Ensures retry logic doesn't prematurely disconnect callers who recover
+
+17. System disconnects call gracefully with polite message after 3 failed input attempts
+   Type: integration
+   Rationale: Provides clear feedback before terminating call
+
+18. DTMF detection correctly identifies digits 1 and 2 within 500ms of keypress
+   Type: integration
+   Rationale: Ensures responsive interaction without missing user input
+
+19. Logging does not impact call routing latency or voice generation performance
+   Type: integration
+   Rationale: Ensures observability doesn't degrade user experience
+
+20. Error recovery returns to main menu without crashing or dropping the call
+   Type: integration
+   Rationale: Maintains call continuity during error conditions
+
+21. Caller data handling complies with privacy regulations (GDPR, CCPA where applicable)
+   Type: manual
+   Rationale: Ensures legal compliance for caller information processing
+
+22. System initializes successfully when ACS and Azure OpenAI services are healthy
+   Type: integration
+   Rationale: Validates proper configuration and service connectivity
+
+23. System fails gracefully and logs startup errors when dependent services are unavailable
+   Type: integration
+   Rationale: Enables troubleshooting and prevents silent failures
+
+
+Definition of Done:
+  [x] All 23 acceptance criteria pass their specified tests
+  [x] Unit tests achieve ├óΓÇ░┬Ñ80% code coverage for DTMF handling, retry logic, and state management
+  [x] Integration tests validate ACS call control, Azure OpenAI voice generation, and logging pipeline
+  [x] End-to-end tests confirm complete call flows for both routing options and all error scenarios
+  [x] Load tests verify 5 concurrent calls with <5s routing latency per call
+  [x] Security review confirms TLS encryption, authentication, and privacy compliance
+  [x] All call events logged to Azure Monitor/Application Insights with required fields
+  [x] Code reviewed and approved by at least one peer
+  [x] Documentation includes architecture diagram, configuration guide, and troubleshooting playbook
+  [x] Deployment runbook tested in staging environment
+  [x] Monitoring alerts configured for call failures, latency spikes, and service errors
+
+
+Risk Areas:
+  [!] Azure OpenAI Service latency or availability causing >2s voice generation delays
+  [!] ACS call transfer API failures or inconsistent behavior across Teams integration
+  [!] DTMF detection accuracy issues with certain phone carriers or VoIP providers
+  [!] Race conditions in concurrent call state management leading to cross-call contamination
+  [!] Network failures mid-transfer causing dropped calls or hung sessions
+  [!] Retry logic edge cases creating infinite loops or premature disconnections
+  [!] Session state not properly isolated between concurrent calls
+  [!] Timeout handling edge cases where multiple timeouts overlap (input timeout + transfer timeout)
+  [!] Error recovery loops where returning to menu repeatedly fails
+  [!] Logging pipeline performance degradation under high call volume
+  [!] Azure OpenAI API rate limits or throttling during peak call times
+  [!] Cost management if Azure OpenAI calls are not optimized or cached appropriately
+  [!] Voice quality degradation due to network conditions or codec issues
+  [!] Caller ID spoofing or malicious input attempting to exploit DTMF handling
+  [!] Configuration drift between ACS phone numbers and Teams user assignments
+  [!] Dependency failures cascading when ACS or OpenAI services experience outages
+[AUTO-APPROVE] Proceed to technical design?
+
+[ARCHITECT PLANNER] Designing technical architecture...
+Analyzed 9 files in codebase
+Traceback (most recent call last):
+  File "C:\Users\dngoi\source\repos\github\dngoins\agent-test\feature_controller.py", line 494, in <module>
+    main()
+  File "C:\Users\dngoi\source\repos\github\dngoins\agent-test\feature_controller.py", line 340, in main
+    arch_output = agent_caller.call_architect_planner(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\dngoi\source\repos\github\dngoins\agent-test\agent_caller.py", line 399, in call_architect_planner
+    response = self._call_claude(prompt, ARCHITECT_PLANNER_SCHEMA)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\dngoi\source\repos\github\dngoins\agent-test\agent_caller.py", line 578, in _call_claude
+    result = subprocess.run(
+             ^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\subprocess.py", line 1622, in _communicate
+    self._stdin_write(input)
+  File "C:\Python312\Lib\subprocess.py", line 1143, in _stdin_write
+    self.stdin.write(input)
+  File "C:\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 20208-20209: character maps to <undefined>

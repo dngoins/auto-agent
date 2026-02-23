@@ -6,7 +6,17 @@
       "Bash(git push:*)",
       "Bash(ls:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(python -c:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(git pull:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(gh run:*)",
+      "Bash(python feature_controller.py:*)",
+      "Bash(unset:*)",
+      "Bash(tee:*)",
+      "Bash(find:*)"
     ]
   }
 }
