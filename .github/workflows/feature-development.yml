@@ -62,9 +62,24 @@ jobs:
         run: |
           npm install -g @anthropic-ai/claude-code
 
+      - name: Setup Claude settings
+        run: |
+          mkdir -p ~/.claude
+          cp .claude/settings.json ~/.claude/settings.json
+          echo "Claude settings configured for Foundry"
+
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Configure Git
         run: |
@@ -81,9 +96,10 @@ jobs:
       - name: Run feature development pipeline
         run: python feature_controller.py --ci-mode --auto-approve
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # GitHub
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Requirements
           REQUIREMENTS_SOURCE: ${{ steps.requirements.outputs.source }}
           REQUIREMENTS_TEXT: ${{ steps.requirements.outputs.text }}
           REQUIREMENTS_TITLE: ${{ steps.requirements.outputs.title }}

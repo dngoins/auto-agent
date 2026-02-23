@@ -67,6 +67,21 @@ jobs:
         run: |
           npm install -g @anthropic-ai/claude-code
 
+      - name: Setup Claude settings
+        run: |
+          mkdir -p ~/.claude
+          cp .claude/settings.json ~/.claude/settings.json
+          echo "Claude settings configured for Foundry"
+
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Authenticate GitHub CLI
         run: |
           gh auth setup-git
