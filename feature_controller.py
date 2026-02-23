@@ -256,13 +256,19 @@ def main():
 
     display_gherkin_scenarios(requirements_output['gherkin_scenarios'])
 
-    # Handle clarification questions
-    while requirements_output['needs_clarification']:
+    # Handle clarification questions with max iteration limit
+    MAX_CLARIFICATION_ROUNDS = 3
+    clarification_iteration = 0
+
+    while requirements_output['needs_clarification'] and clarification_iteration < MAX_CLARIFICATION_ROUNDS:
+        clarification_iteration += 1
         questions = requirements_output['clarification_questions']
+
+        print(f"\n[CLARIFICATION ROUND {clarification_iteration}/{MAX_CLARIFICATION_ROUNDS}]")
 
         if args.ci_mode or args.auto_approve:
             # Auto-answer with first suggested answer
-            print(f"\n[CI MODE] Auto-answering {len(questions)} clarification questions")
+            print(f"[CI MODE] Auto-answering {len(questions)} clarification questions")
             user_answers = []
             for q in questions:
                 auto_answer = q['suggested_answers'][0] if q['suggested_answers'] else "Yes"
@@ -282,6 +288,12 @@ def main():
         )
 
         display_gherkin_scenarios(requirements_output['gherkin_scenarios'])
+
+    # Check if we hit the max iteration limit
+    if requirements_output['needs_clarification'] and clarification_iteration >= MAX_CLARIFICATION_ROUNDS:
+        print(f"\n⚠️  WARNING: Reached maximum clarification rounds ({MAX_CLARIFICATION_ROUNDS})")
+        print("Proceeding with current requirements despite agent requesting more clarification.")
+        print("You may want to refine requirements manually if needed.")
 
     # Save Gherkin scenarios
     gherkin_file = Path("requirements.gherkin")
