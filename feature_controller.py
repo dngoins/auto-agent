@@ -15,6 +15,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Configure UTF-8 encoding for stdout/stderr to prevent Unicode encoding errors on Windows
+if sys.platform == 'win32':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, errors='replace')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, errors='replace')
+
 from devops_agent import DevOpsAgent
 from agent_caller import AgentCaller
 from contracts import (
@@ -79,7 +85,7 @@ def collect_files() -> dict:
         if any(skip in str(file) for skip in [".venv", "__pycache__", "controller"]):
             continue
         try:
-            files_data[str(file)] = file.read_text()
+            files_data[str(file)] = file.read_text(encoding='utf-8', errors='replace')
         except Exception as e:
             print(f"Warning: Could not read {file}: {e}")
     return files_data
