@@ -92,7 +92,10 @@ def main():
 
         # Get existing PR number
         pr_number = devops.get_pr_number()
-        print(f"Fixing existing PR #{pr_number}")
+        if pr_number:
+            print(f"Fixing existing PR #{pr_number}")
+        else:
+            print("No existing PR found, will work on branch directly")
         first_commit_made = True
     else:
         print("Running in local mode - creating new branch...")

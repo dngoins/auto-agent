@@ -110,13 +110,16 @@ class DevOpsAgent:
         print(f"Created PR #{pr_number}")
         return pr_number
 
-    def get_pr_number(self) -> int:
-        """Get the PR number for the current branch"""
+    def get_pr_number(self) -> Optional[int]:
+        """Get the PR number for the current branch. Returns None if no PR exists."""
         result = subprocess.run(
             ["gh", "pr", "view", "--json", "number"],
             capture_output=True,
             text=True
         )
+        if result.returncode != 0 or not result.stdout.strip():
+            # No PR exists for current branch
+            return None
         pr_number = json.loads(result.stdout)["number"]
         return pr_number
 
